@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logix Restore Working Project</title>
+<style>
+:root{--ra-red:#CD163F;--ab-blue:#003E7E;--ft-blue:#00AEEF;--orange:#F58025;--ink:#202A33;--muted:#5F6B76;--bg:#F5F7F9;--paper:#fff;--line:#D7DDE2;--soft-blue:#EAF7FC;--soft-red:#FCEEF2;--soft-orange:#FFF3E9;--green:#1C6B4A;--console:#18222C;--console-text:#EAF0F4}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,Arial,"Segoe UI",system-ui,sans-serif}
+button{font:inherit}
+.app{max-width:1500px;margin:auto;padding:0 clamp(18px,3vw,44px) 40px;border-top:6px solid var(--ra-red);display:grid;gap:20px}
+.top{padding-top:30px;display:flex;justify-content:space-between;gap:20px;align-items:flex-end;flex-wrap:wrap}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--ra-red);font-weight:900}
+h1{font-size:clamp(36px,5vw,62px);line-height:.98;letter-spacing:-.04em;margin:7px 0 8px}
+.lead{font-size:18px;color:var(--muted);max-width:940px;line-height:1.45}
+.badge{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:9px 13px;font-weight:800;color:var(--muted)}
+.context{display:grid;grid-template-columns:1.05fr 1.4fr .55fr .7fr;border:1px solid var(--line);background:var(--paper);border-radius:16px;overflow:hidden}
+.context>div{padding:13px 16px;border-right:1px solid var(--line);min-width:0}.context>div:last-child{border-right:0}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:900;margin-bottom:4px}
+.value{font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.blue{color:var(--ab-blue)}
+
+.restore-picker{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:20px 22px;display:grid;gap:14px}
+.picker-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap}
+.picker-head h2{font-size:30px;margin:4px 0 4px;letter-spacing:-.025em}
+.picker-head p{margin:0;color:var(--muted);line-height:1.45}
+.versions{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(270px,1fr);gap:10px;overflow-x:auto;padding:2px 2px 8px}
+.version{display:grid;grid-template-columns:auto 64px 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:12px;padding:13px;background:#FBFCFD;cursor:pointer;min-height:94px}
+.version:hover{border-color:var(--ft-blue)}
+.version.selected{border-color:var(--ab-blue);box-shadow:inset 4px 0 0 var(--ab-blue);background:#F3F8FC}
+.version input{width:18px;height:18px;margin-top:4px}
+.vnum{font-weight:950;color:var(--ab-blue);font-size:20px}
+.sha{font-family:Consolas,monospace;color:var(--ra-red);font-weight:800;font-size:13px;grid-column:2}
+.msg{font-weight:750;line-height:1.35}
+.date{grid-column:3;color:var(--muted);font-size:12px}
+.picker-footer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:center;border-top:1px solid var(--line);padding-top:14px}
+.selected-target{line-height:1.5;color:var(--muted)}.selected-target strong{color:var(--ink);font-size:17px}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.btn{border:0;border-radius:10px;min-height:44px;padding:11px 16px;font-weight:850;cursor:pointer;background:var(--ra-red);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.btn:disabled{opacity:.4;cursor:not-allowed}.btn.ghost{background:#fff;color:var(--ab-blue);border:1px solid var(--line)}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.02fr) minmax(500px,.98fr);gap:18px;align-items:stretch}
+.panel{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:22px;min-width:0}
+.panel h2{font-size:30px;margin:5px 0 6px;letter-spacing:-.025em}.panel p{margin:0;color:var(--muted);line-height:1.5}
+.cli-panel{display:grid;grid-template-rows:auto minmax(320px,1fr) auto;gap:14px}
+.console{margin:0;background:var(--console);color:var(--console-text);border-radius:14px;padding:18px 20px;font-family:"Cascadia Mono","Cascadia Code",Consolas,monospace;font-size:13.5px;font-weight:550;line-height:1.58;white-space:pre-wrap;overflow:auto;min-height:340px;max-height:620px;border-left:5px solid var(--ft-blue)}
+details{border:1px solid var(--line);border-radius:12px;background:#FAFBFC}
+summary{cursor:pointer;padding:12px 14px;font-weight:850;color:var(--ab-blue)}
+details pre{margin:0;border-top:1px solid var(--line);padding:14px;white-space:pre-wrap;font-family:"Cascadia Mono",Consolas,monospace;font-size:13px;line-height:1.55;background:#fff;max-height:260px;overflow:auto}
+
+.plan{display:grid;gap:9px;margin-top:16px}
+.step{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:11px 12px;color:var(--muted);transition:.15s}
+.step .n{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-weight:900;color:var(--ab-blue);background:#fff}
+.step strong{color:var(--ink)}
+.step.active{border-color:var(--ft-blue);background:var(--soft-blue);box-shadow:inset 4px 0 0 var(--ft-blue)}.step.active .n{background:var(--ft-blue);color:#062336;border-color:transparent}
+.step.done{border-color:#9FB6C9;background:#F5F9FC}.step.done .n{background:var(--ab-blue);color:#fff;border-color:transparent}
+.step.wait-user{border-color:var(--orange);background:var(--soft-orange);box-shadow:inset 4px 0 0 var(--orange)}.step.wait-user .n{background:var(--orange);color:#fff;border-color:transparent}
+.step.fail{border-color:var(--ra-red);background:var(--soft-red);box-shadow:inset 4px 0 0 var(--ra-red)}
+
+.callout{margin-top:14px;border:1px solid #A9DFF3;border-left:6px solid var(--ft-blue);background:var(--soft-blue);border-radius:14px;padding:15px 16px;line-height:1.5}
+.callout.warning{border-color:#E9C39C;border-left-color:var(--orange);background:var(--soft-orange)}
+.callout.success{border-color:#A8CEBB;border-left-color:var(--green);background:#F1F8F4}
+.callout.fail{border-color:#E5A5B4;border-left-color:var(--ra-red);background:var(--soft-red)}
+.callout strong{display:block;font-size:18px;margin-bottom:3px}
+
+.restore-footer{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.restore-footer>div{border-left:5px solid var(--ab-blue);padding:3px 0 3px 14px;min-width:0}
+.restore-footer>div:nth-child(2){border-left-color:var(--orange)}
+.restore-footer>div:nth-child(3){border-left-color:var(--green)}
+.restore-footer strong{display:block;font-size:17px;margin-bottom:4px}
+.restore-footer span{display:block;color:var(--muted);line-height:1.45;overflow-wrap:anywhere}
+
+.status{min-height:24px;color:var(--muted);line-height:1.45}.status b{color:var(--ink)}
+@media(max-width:1000px){.grid{grid-template-columns:1fr}.context{grid-template-columns:1fr 1fr}.restore-footer{grid-template-columns:1fr}.picker-footer{grid-template-columns:1fr}}
+@media(max-width:620px){.context{grid-template-columns:1fr}.versions{grid-auto-columns:minmax(240px,85vw)}}
+</style>
+</head>
+<body>
+<main class="app">
+
+<header class="top">
+<div>
+<div class="kicker">Logix version control</div>
+<h1>Restore the working project.</h1>
+<div class="lead">Choose a captured Git version and make that engineering state become the normal base-named ACD again. The current ACD is backed up first, and Git history is not rewritten.</div>
+</div>
+<div class="badge">Git version → same project name</div>
+</header>
+
+<section class="context">
+<div><div class="label">Working project</div><div class="value" id="project">Loading…</div></div>
+<div><div class="label">Repository</div><div class="value" id="repo">Loading…</div></div>
+<div><div class="label">Git head</div><div class="value blue" id="head">—</div></div>
+<div><div class="label">State</div><div class="value" id="state">Connecting</div></div>
+</section>
+
+<section class="restore-picker">
+<div class="picker-head">
+<div><div class="kicker">Restore point</div><h2>Choose the version to put back into the working ACD</h2><p>The selected historical engineering state will ultimately replace the base-named project shown above.</p></div>
+<button class="btn ghost" id="refreshBtn">Refresh versions</button>
+</div>
+<div class="versions" id="versions"><div class="status">Loading version history…</div></div>
+<div class="picker-footer">
+<div class="selected-target" id="selectStatus"><strong>No restore point selected.</strong><br>Choose a captured Git version above.</div>
+<div class="actions"><button class="btn" id="restoreBtn" disabled>Restore to working project</button></div>
+</div>
+</section>
+
+<section class="grid">
+<article class="panel cli-panel">
+<div><div class="kicker">Technical view</div><h2>Real CLI activity</h2><p>This is the actual Git, l5xgit, Logix SDK, backup, and reopen activity used to restore the project. Nothing here is simulated.</p></div>
+<pre class="console" id="technical">No restore has run yet.</pre>
+<details><summary>Restore safety details</summary><pre id="technicalContext">The selected version is rebuilt completely in a temporary location before the working ACD is touched.
+
+The current base-named ACD is backed up immediately before replacement.
+
+Git history and the current Git branch pointer are not moved backward.</pre></details>
+</article>
+
+<article class="panel">
+<div class="kicker">Restore workflow</div><h2>Put the selected version back into the project</h2><p>The current Studio 5000 project can remain open while the historical ACD is being reconstructed.</p>
+<div class="plan">
+<div class="step" data-stage="select"><span class="n">1</span><div><strong>Select restore point</strong><br><small>Choose the historical Git revision</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="prepare"><span class="n">2</span><div><strong>Prepare historical source</strong><br><small>Create an isolated detached Git worktree</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="rebuild"><span class="n">3</span><div><strong>Rebuild temporary ACD</strong><br><small>Reconstruct the selected version before touching the working project</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="waiting_close"><span class="n">4</span><div><strong>Close current project</strong><br><small>Use File → Close; leave Studio 5000 running</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="replace"><span class="n">5</span><div><strong>Back up &amp; replace working ACD</strong><br><small>Back up the current file, then restore the selected state under the same project name</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="reopen"><span class="n">6</span><div><strong>Reopen working project</strong><br><small>Prepare Studio 5000's Open Project dialog for the restored base-named ACD</small></div><span class="mark">Waiting</span></div>
+</div>
+<div class="callout" id="callout"><strong>Ready.</strong><span id="calloutText">Choose a restore point above.</span></div>
+</article>
+</section>
+
+<section class="restore-footer">
+<div><strong>Working project</strong><span id="footerProject">The restored engineering state keeps the normal ACD filename.</span></div>
+<div><strong>Safety backup</strong><span id="footerBackup">A timestamped RESTORE-BACKUP ACD is created before replacement.</span></div>
+<div><strong>Git history</strong><span>Unchanged. Restore does not delete V2/V3 or move the branch pointer backward.</span></div>
+</section>
+
+</main>
+<script>
+(() => {
+ const $=id=>document.getElementById(id),steps={};document.querySelectorAll('.step').forEach(x=>steps[x.dataset.stage]=x);
+ const project=$('project'),repo=$('repo'),head=$('head'),state=$('state'),versions=$('versions'),restoreBtn=$('restoreBtn'),refreshBtn=$('refreshBtn'),selectStatus=$('selectStatus'),callout=$('callout'),calloutText=$('calloutText'),technical=$('technical'),footerProject=$('footerProject'),footerBackup=$('footerBackup');
+ let meta=null,selected=null,poll=null,lastLog='';
+
+ function setStep(name,mode,label){const el=steps[name];if(!el)return;el.className='step'+(mode?' '+mode:'');el.querySelector('.mark').textContent=label||({active:'Running',done:'Done','wait-user':'Your action',fail:'Failed'}[mode]||'Waiting');}
+ function resetSteps(){Object.keys(steps).forEach(k=>setStep(k,'','Waiting'));if(selected)setStep('select','done','Selected');}
+ function setCallout(mode,title,text){callout.className='callout'+(mode?' '+mode:'');callout.querySelector('strong').textContent=title;calloutText.textContent=text;}
+
+ function render(m){
+   meta=m;
+   const projectName=m.projectFileName||'Current ACD';
+   project.textContent=projectName;
+   repo.textContent=m.repoRoot||'Not connected';
+   head.textContent=m.version||'—';
+   state.textContent=m.ready?'Ready':'Needs setup';
+   footerProject.textContent=`Selected history will replace ${projectName}; the filename remains ${projectName}.`;
+   versions.innerHTML='';
+
+   if(!m.ready){
+     restoreBtn.disabled=true;
+     setCallout('warning','Restore unavailable.',m.problem||'This project is not ready for restore.');
+   }
+
+   if(!m.versions?.length){
+     versions.innerHTML='<div class="status">No captured Git versions were found.</div>';
+     return;
+   }
+
+   m.versions.forEach(v=>{
+     const label=document.createElement('label');
+     label.className='version';
+     label.innerHTML=`<input type="radio" name="version"><span class="vnum">${v.version}</span><span class="msg"></span><span class="sha">${v.shortSha}</span><span class="date"></span>`;
+     label.querySelector('.msg').textContent=v.message;
+     label.querySelector('.date').textContent=new Date(v.commitIso).toLocaleString();
+
+     label.querySelector('input').addEventListener('change',()=>{
+       document.querySelectorAll('.version').forEach(x=>x.classList.remove('selected'));
+       label.classList.add('selected');
+       selected=v;
+       restoreBtn.disabled=!m.ready;
+       restoreBtn.textContent=`Restore ${v.version} to ${projectName}`;
+       resetSteps();
+       selectStatus.innerHTML=`<strong>${v.version} · ${v.message}</strong><br>${v.shortSha} will become the engineering content of ${projectName}.`;
+       setCallout('warning',`Ready to restore ${v.version}.`,`The historical ACD will be rebuilt first. ${projectName} is not touched until you close it in Studio 5000.`);
+     });
+
+     versions.appendChild(label);
+   });
+ }
+
+ async function load(){
+   refreshBtn.disabled=true;
+   try{
+     const r=await fetch('/api/meta',{cache:'no-store'});
+     if(!r.ok)throw new Error(await r.text());
+     render(await r.json());
+   }catch(e){
+     state.textContent='Unavailable';
+     setCallout('fail','Could not load restore history.',e.message);
+   }finally{
+     refreshBtn.disabled=false;
+   }
+ }
+
+ async function pollState(){
+   try{
+     const r=await fetch('/api/restore-state',{cache:'no-store'});
+     if(!r.ok)return;
+     const d=await r.json();
+     if(!d.active&&!d.stage)return;
+
+     if(d.log!==undefined&&d.log!==lastLog){
+       lastLog=d.log;
+       technical.textContent=d.log||'No technical output yet.';
+       technical.scrollTop=technical.scrollHeight;
+     }
+
+     ['select','prepare','rebuild','waiting_close','replace','reopen'].forEach(k=>setStep(k,'','Waiting'));
+     setStep('select','done','Selected');
+
+     if(d.stage==='prepare'){
+       setStep('prepare','active');state.textContent='Preparing';
+       setCallout('',d.message||'Preparing selected version.',d.detail||'The working ACD has not been changed.');
+     }else if(d.stage==='rebuild'){
+       setStep('prepare','done');setStep('rebuild','active');state.textContent='Rebuilding';
+       setCallout('',d.message||'Rebuilding temporary ACD.',d.detail||'The working ACD has not been changed.');
+     }else if(d.stage==='waiting_close'){
+       setStep('prepare','done');setStep('rebuild','done');setStep('waiting_close','wait-user');state.textContent='Waiting for you';
+       setCallout('warning','Close the current project in Studio 5000.','Use File → Close. Leave Studio 5000 itself running. Restore continues automatically after the base-named ACD unlocks.');
+     }else if(d.stage==='replace'){
+       setStep('prepare','done');setStep('rebuild','done');setStep('waiting_close','done');setStep('replace','active');state.textContent='Restoring';
+       if(d.backup_path)footerBackup.textContent=d.backup_path;
+       setCallout('',d.message||'Backing up and replacing the working ACD.',d.backup_path||'A timestamped backup is being created first.');
+     }else if(d.stage==='reopen'){
+       setStep('prepare','done');setStep('rebuild','done');setStep('waiting_close','done');setStep('replace','done');setStep('reopen','active');state.textContent='Preparing reopen';
+       if(d.backup_path)footerBackup.textContent=d.backup_path;
+       setCallout('',d.message||'Preparing Studio 5000 to reopen the working project.',d.detail||'');
+     }else if(d.stage==='success'){
+       ['prepare','rebuild','waiting_close','replace','reopen'].forEach(k=>setStep(k,'done'));
+       state.textContent='Restored';
+       if(d.backup_path)footerBackup.textContent=d.backup_path;
+       const successText=[d.message||'The selected version is now the working ACD.',d.detail||''].filter(Boolean).join(' ');
+       setCallout('success','Working project restored.',successText);
+       restoreBtn.disabled=false;refreshBtn.disabled=false;clearInterval(poll);poll=null;
+     }else if(d.stage==='failed'){
+       const active=Object.values(steps).find(x=>x.classList.contains('active')||x.classList.contains('wait-user'));
+       if(active){active.className='step fail';active.querySelector('.mark').textContent='Failed';}
+       state.textContent='Needs attention';
+       setCallout('fail','Restore stopped.',d.detail||d.message||'See CLI activity.');
+       restoreBtn.disabled=false;refreshBtn.disabled=false;clearInterval(poll);poll=null;
+     }
+   }catch{}
+ }
+
+ restoreBtn.addEventListener('click',async()=>{
+   if(!selected||!meta?.ready)return;
+   const projectName=meta.projectFileName||'the working ACD';
+   const ok=window.confirm(`Restore ${selected.version} to ${projectName}?\n\n${selected.message}\n\n${projectName} will keep the same filename. The selected version is rebuilt first, a timestamped backup of the current ACD is created, and Git history is not rewritten. When instructed, use File → Close in Studio 5000.`);
+   if(!ok)return;
+
+   restoreBtn.disabled=true;refreshBtn.disabled=true;lastLog='';technical.textContent='Starting restore…';resetSteps();setStep('select','done','Selected');state.textContent='Starting';
+   setCallout('',`Preparing ${selected.version}…`,`${projectName} is still untouched.`);
+
+   try{
+     const r=await fetch('/api/restore',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sha:selected.sha,version:selected.version})});
+     if(!r.ok){let x;try{x=(await r.json()).error}catch{}throw new Error(x||await r.text());}
+     if(poll)clearInterval(poll);
+     poll=setInterval(pollState,500);
+     await pollState();
+   }catch(e){
+     restoreBtn.disabled=false;refreshBtn.disabled=false;state.textContent='Needs attention';
+     setCallout('fail','Restore could not start.',e.message);
+   }
+ });
+
+ refreshBtn.addEventListener('click',load);
+ load();
+})();
+</script>
+</body>
+</html>

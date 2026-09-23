@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logix Compare Version</title>
+<style>
+:root{--ra-red:#CD163F;--ab-blue:#003E7E;--ft-blue:#00AEEF;--ink:#202A33;--muted:#5F6B76;--bg:#F5F7F9;--paper:#fff;--line:#D7DDE2;--soft-blue:#EAF7FC;--soft-red:#FCEEF2}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,Arial,"Segoe UI",system-ui,sans-serif}
+button{font:inherit}.app{max-width:1450px;margin:auto;padding:0 clamp(18px,3vw,44px) 40px;border-top:6px solid var(--ra-red);display:grid;gap:20px}
+.top{padding-top:30px;display:flex;justify-content:space-between;gap:20px;align-items:flex-end;flex-wrap:wrap}.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--ra-red);font-weight:900}
+h1{font-size:clamp(36px,5vw,62px);line-height:.98;letter-spacing:-.04em;margin:7px 0 8px}.lead{font-size:18px;color:var(--muted);max-width:900px;line-height:1.45}
+.badge{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:9px 13px;font-weight:800;color:var(--muted)}
+.context{display:grid;grid-template-columns:1.1fr 1.4fr .7fr;border:1px solid var(--line);background:var(--paper);border-radius:16px;overflow:hidden}.context>div{padding:13px 16px;border-right:1px solid var(--line);min-width:0}.context>div:last-child{border-right:0}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:900;margin-bottom:4px}.value{font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.banner{border:1px solid #A9DFF3;border-left:6px solid var(--ft-blue);background:var(--soft-blue);border-radius:16px;padding:16px 18px;line-height:1.5}.banner strong{display:block;font-size:18px;margin-bottom:3px}
+.grid{display:grid;grid-template-columns:minmax(0,.9fr) minmax(500px,1.1fr);gap:18px}.panel{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:22px;min-width:0}.panel h2{font-size:30px;margin:5px 0 6px;letter-spacing:-.025em}.panel p{margin:0;color:var(--muted);line-height:1.5}
+.current{margin-top:16px;border:1px solid var(--line);border-radius:14px;padding:16px;background:#FAFBFC}.current strong{display:block;font-size:20px}.current span{display:block;color:var(--muted);margin-top:4px}
+.versions{display:grid;gap:9px;margin-top:16px;max-height:520px;overflow:auto;padding-right:4px}.version{display:grid;grid-template-columns:auto 75px 92px 1fr;gap:12px;align-items:center;border:1px solid var(--line);border-radius:12px;padding:12px;background:#FBFCFD;cursor:pointer}.version:hover{border-color:var(--ft-blue)}.version.selected{border-color:var(--ab-blue);box-shadow:inset 4px 0 0 var(--ab-blue);background:#F3F8FC}.version input{width:18px;height:18px}.vnum{font-weight:950;color:var(--ab-blue);font-size:20px}.sha{font-family:Consolas,monospace;color:var(--ra-red);font-weight:800}.msg{font-weight:700}.date{grid-column:4;color:var(--muted);font-size:12px}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}.btn{border:0;border-radius:10px;min-height:44px;padding:11px 16px;font-weight:850;cursor:pointer;background:var(--ra-red);color:#fff}.btn:disabled{opacity:.4;cursor:not-allowed}.btn.ghost{background:#fff;color:var(--ab-blue);border:1px solid var(--line)}
+.status{margin-top:12px;min-height:26px;color:var(--muted);line-height:1.45}.status b{color:var(--ink)}
+.steps{display:grid;gap:9px;margin-top:16px}.step{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--muted)}.step .n{width:27px;height:27px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-weight:900;color:var(--ab-blue)}.step.active{border-color:var(--ft-blue);background:var(--soft-blue)}.step.done .n{background:var(--ab-blue);color:#fff}.step.fail{border-color:var(--ra-red);background:var(--soft-red)}.step strong{color:var(--ink)}
+details{margin-top:16px;border:1px solid var(--line);border-radius:12px;background:#FAFBFC}summary{cursor:pointer;padding:12px 14px;font-weight:850;color:var(--ab-blue)}pre{margin:0;border-top:1px solid var(--line);padding:14px;white-space:pre-wrap;font-family:"Cascadia Mono",Consolas,monospace;font-size:13px;line-height:1.55;background:#fff;max-height:300px;overflow:auto}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.context{grid-template-columns:1fr}.context>div{border-right:0;border-bottom:1px solid var(--line)}.context>div:last-child{border-bottom:0}}
+</style>
+</head>
+<body>
+<main class="app">
+<header class="top"><div><div class="kicker">Logix version control</div><h1>Compare a saved version.</h1><div class="lead">Choose a Git version. The tool reconstructs that revision temporarily, exports the current saved ACD, and opens Rockwell's Logix Designer Compare Tool.</div></div><div class="badge">Git → temporary L5X → Logix Compare</div></header>
+<section class="context"><div><div class="label">Current project</div><div class="value" id="project">Loading…</div></div><div><div class="label">Repository</div><div class="value" id="repo">Loading…</div></div><div><div class="label">State</div><div class="value" id="state">Connecting</div></div></section>
+<section class="banner"><strong>Save in Studio 5000 first.</strong>Unsaved controller edits are not part of the comparison. Historical L5X files are generated only for the compare session; they are not stored as extra copies in Git.</section>
+<section class="grid">
+<article class="panel">
+<div class="kicker">Left side · historical</div><h2>Choose a Git version</h2><p>The selected captured version will appear on the left side of Logix Designer Compare.</p>
+<div class="versions" id="versions"><div class="status">Loading version history…</div></div>
+<div class="actions"><button class="btn" id="compareBtn" disabled>Compare in Logix Designer</button><button class="btn ghost" id="refreshBtn">Refresh versions</button></div>
+<div class="status" id="status">Choose a historical version to compare with the saved ACD.</div>
+</article>
+<article class="panel">
+<div class="kicker">Right side · current</div><h2>Current saved project</h2><p>This is the ACD you are working on now, converted to a temporary L5X and shown on the right side of Logix Designer Compare.</p>
+<div class="current"><strong id="currentName">Current ACD</strong><span id="currentPath">—</span></div>
+<div class="steps">
+<div class="step" data-stage="current"><span class="n">1</span><div><strong>Export current project</strong><br><small>Copy the saved ACD and convert it to temporary L5X</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="history"><span class="n">2</span><div><strong>Rebuild selected Git version</strong><br><small>Implode exploded source into temporary L5X</small></div><span class="mark">Waiting</span></div>
+<div class="step" data-stage="compare"><span class="n">3</span><div><strong>Open Logix Compare</strong><br><small>Rockwell renders the engineering differences</small></div><span class="mark">Waiting</span></div>
+</div>
+<details><summary>Technical details</summary><pre id="technical">No comparison has run yet.</pre></details>
+</article>
+</section>
+</main>
+<script>
+(() => {
+ const $=id=>document.getElementById(id), stages={};
+ document.querySelectorAll('.step').forEach(x=>stages[x.dataset.stage]=x);
+ const project=$('project'),repo=$('repo'),state=$('state'),currentName=$('currentName'),currentPath=$('currentPath'),versions=$('versions'),compareBtn=$('compareBtn'),refreshBtn=$('refreshBtn'),status=$('status'),technical=$('technical');
+ let meta=null, selected=null;
+ function stage(name,s,label){const el=stages[name];if(!el)return;el.className='step '+s;el.querySelector('.mark').textContent=label||({active:'Running',done:'Done',fail:'Failed'}[s]||'Waiting');}
+ function log(line){if(!line)return;if(technical.textContent==='No comparison has run yet.')technical.textContent='';technical.textContent+=line+'\n';technical.scrollTop=technical.scrollHeight;}
+ function reset(){Object.keys(stages).forEach(k=>stage(k,'','Waiting'));technical.textContent='No comparison has run yet.';}
+ function render(m){meta=m;project.textContent=m.projectFileName||'Current ACD';repo.textContent=m.repoRoot||'Not connected';currentName.textContent=m.projectFileName||'Current ACD';currentPath.textContent=m.projectPath||'—';
+   if(m.ready){state.textContent='Ready';status.textContent='Choose a historical version to compare with the saved ACD.';}
+   else if(!m.configPresent){state.textContent='No VCS history';status.textContent='Capture this project into version control before comparing versions.';}
+   else if(!m.l5xgitConfigured){state.textContent='l5xgit unavailable';status.textContent='l5xgit.exe could not be found.';}
+   else if(!m.rslCompareConfigured){state.textContent='Logix Compare not found';status.textContent='RSLCompare.exe was not found. Install Logix Designer Compare Tool or pass its path explicitly.';}
+   else{state.textContent='Needs attention';}
+   technical.textContent=[`Project:    ${m.projectPath||'—'}`,`Repository: ${m.repoRoot||'—'}`,`l5xgit:     ${m.l5xgitPath||'—'}`,`RSLCompare: ${m.rslComparePath||'not found'}`].join('\n');
+   versions.innerHTML='';if(!m.versions?.length){versions.innerHTML='<div class="status">No captured Git versions were found.</div>';return;}m.versions.forEach(v=>{const label=document.createElement('label');label.className='version';label.innerHTML=`<input type="radio" name="version"><span class="vnum">${v.version}</span><span class="sha">${v.shortSha}</span><span class="msg"></span><span class="date"></span>`;label.querySelector('.msg').textContent=v.message;label.querySelector('.date').textContent=new Date(v.commitIso).toLocaleString();label.querySelector('input').addEventListener('change',()=>{document.querySelectorAll('.version').forEach(x=>x.classList.remove('selected'));label.classList.add('selected');selected=v;compareBtn.disabled=!m.ready;status.innerHTML=`Compare <b>${v.version}</b> with the saved ACD.`;});versions.appendChild(label);});}
+ async function load(){refreshBtn.disabled=true;try{const r=await fetch('/api/meta',{cache:'no-store'});if(!r.ok)throw new Error(await r.text());render(await r.json());}catch(e){state.textContent='Unavailable';status.textContent=e.message;}finally{refreshBtn.disabled=false;}}
+ compareBtn.addEventListener('click',async()=>{if(!selected)return;compareBtn.disabled=true;reset();state.textContent='Preparing comparison';status.innerHTML=`Preparing <b>${selected.version}</b> for Logix Compare…`;try{const r=await fetch('/api/compare',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sha:selected.sha,version:selected.version})});if(!r.ok){let x;try{x=(await r.json()).error}catch{}throw new Error(x||await r.text());}}catch(e){compareBtn.disabled=false;status.innerHTML='<b>Compare could not start.</b> '+e.message;state.textContent='Needs attention';}});
+ refreshBtn.addEventListener('click',load);
+ const stream=new EventSource('/events');stream.onmessage=e=>{const d=JSON.parse(e.data);if(d.type==='raw')log(d.line);else if(d.type==='stage')stage(d.stage,d.state,d.label);else if(d.type==='compare_started'){state.textContent='Logix Compare open';status.innerHTML='<b>Logix Designer Compare Tool opened.</b> Historical '+d.version+' is on the left; the current saved project is on the right.';compareBtn.disabled=false;}else if(d.type==='compare_failure'){state.textContent='Needs attention';status.innerHTML='<b>Compare failed.</b> '+d.message;compareBtn.disabled=false;Object.values(stages).filter(x=>x.classList.contains('active')).forEach(x=>{x.className='step fail';x.querySelector('.mark').textContent='Failed';});}};
+ load();
+})();
+</script>
+</body></html>

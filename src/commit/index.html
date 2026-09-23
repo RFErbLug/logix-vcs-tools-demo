@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Logix Version Control Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ra-red:#CD163F;
+      --ab-blue:#003E7E;
+      --ft-blue:#00AEEF;
+      --orange:#F58025;
+      --cool-grey:#E6E7E8;
+      --ink:#202A33;
+      --muted:#5F6B76;
+      --bg:#F5F7F9;
+      --paper:#FFFFFF;
+      --line:#D7DDE2;
+      --soft-blue:#EAF7FC;
+      --soft-red:#FCEEF2;
+      --soft-orange:#FFF3E9;
+      --console:#18222C;
+      --console-text:#EAF0F4;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,Arial,"Segoe UI",system-ui,sans-serif}
+    button,input{font:inherit}
+    button:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid rgba(0,174,239,.35);outline-offset:2px}
+    .app{max-width:1500px;margin:auto;padding:0 clamp(18px,3vw,44px) 40px;display:grid;gap:22px;border-top:6px solid var(--ra-red)}
+    .product-nav{display:flex;gap:8px;align-items:center;padding-top:12px;flex-wrap:wrap}
+    .product-nav a{color:var(--muted);text-decoration:none;border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:8px 12px;font-size:12px;font-weight:850;letter-spacing:.04em}
+    .product-nav a.active{background:var(--ab-blue);border-color:var(--ab-blue);color:#fff}
+    .product-nav a:hover{border-color:var(--ft-blue);color:var(--ab-blue)}
+    .product-nav a.active:hover{color:#fff}
+    .ci-trigger-note{margin-top:8px;padding:9px 11px;border-left:4px solid var(--ft-blue);background:var(--soft-blue);border-radius:8px;color:var(--muted);font-size:12px;line-height:1.4}
+    .top{padding-top:28px;display:flex;justify-content:space-between;gap:24px;align-items:flex-end;flex-wrap:wrap;position:relative}
+    .top:after{content:"";position:absolute;right:0;top:20px;width:88px;height:9px;background:linear-gradient(90deg,var(--ft-blue) 0 58%,var(--orange) 58% 78%,var(--ra-red) 78%);transform:skewX(-45deg);transform-origin:right center}
+    .kicker{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--ra-red);font-weight:800}
+    h1{font-size:clamp(38px,5vw,68px);line-height:.96;letter-spacing:-.045em;margin:7px 0 10px;max-width:900px}
+    .lead{font-size:clamp(16px,1.5vw,20px);color:var(--muted);max-width:850px;line-height:1.45}
+    .badge{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:9px 13px;color:var(--muted);font-size:13px;font-weight:700}
+    .context{display:grid;grid-template-columns:1.1fr .7fr 1.5fr .7fr;border:1px solid var(--line);background:var(--paper);border-radius:16px;overflow:hidden}
+    .context-item{padding:13px 16px;min-width:0;border-right:1px solid var(--line)}
+    .context-item:last-child{border-right:0}
+    .context-label{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);font-weight:800;margin-bottom:4px}
+    .context-value{display:block;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .context-value.blue{color:var(--ab-blue)}
+    .context-value.state{color:var(--ra-red)}
+    .main-grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(420px,.95fr);gap:18px;align-items:stretch}
+    .panel{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:22px;min-width:0}
+    .panel h2{font-size:clamp(24px,2.2vw,34px);margin:6px 0 6px;letter-spacing:-.025em}
+    .panel p{color:var(--muted);margin:0;line-height:1.5}
+    .cli-panel{display:grid;grid-template-rows:auto auto minmax(290px,1fr) auto;gap:15px}
+    .command-shell{border:1px solid #BEC7CF;background:#F9FAFB;border-radius:12px;padding:11px 13px;display:grid;gap:5px}
+    .command-label{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800}
+    .command-line{font-family:Consolas,"Cascadia Mono",monospace;font-size:13px;color:var(--ab-blue);overflow-wrap:anywhere;line-height:1.5}
+    .console{margin:0;background:var(--console);color:var(--console-text);border-radius:14px;padding:18px 20px;font-family:"Cascadia Mono","Cascadia Code",Consolas,monospace;font-size:13.5px;font-weight:550;line-height:1.58;letter-spacing:.005em;white-space:pre-wrap;overflow:auto;min-height:280px;max-height:440px;border-left:5px solid var(--ft-blue)}
+    details{border:1px solid var(--line);border-radius:12px;background:#FAFBFC;overflow:hidden}
+    summary{cursor:pointer;padding:12px 14px;font-weight:800;color:var(--ab-blue)}
+    details pre{margin:0;border-top:1px solid var(--line);padding:16px 18px;white-space:pre-wrap;overflow:auto;font-family:"Cascadia Mono","Cascadia Code",Consolas,monospace;font-size:14px;font-weight:600;line-height:1.6;color:var(--ink);background:#fff}
+    .process{display:grid;gap:16px;align-content:start}
+    .rail{display:grid;gap:9px;margin-top:4px}
+    .step{display:grid;grid-template-columns:36px 1fr auto;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;background:#FBFCFD;color:var(--muted);transition:.18s ease}
+    .step .num{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:1px solid #BFC8D0;background:#fff;font-size:12px;font-weight:900;color:var(--ab-blue)}
+    .step strong{color:var(--ink)} .step small{color:var(--muted)}
+    .step.active{border-color:var(--ft-blue);background:var(--soft-blue);box-shadow:inset 4px 0 0 var(--ft-blue)}
+    .step.active .num{background:var(--ft-blue);color:#062336;border-color:transparent}
+    .step.done{border-color:#9FB6C9;background:#F5F9FC}.step.done .num{background:var(--ab-blue);color:#fff;border-color:transparent}
+    .step.fail{border-color:var(--ra-red);background:var(--soft-red);box-shadow:inset 4px 0 0 var(--ra-red)}.step.fail .num{background:var(--ra-red);color:#fff;border-color:transparent}
+    .version{border:1px solid var(--line);border-radius:14px;padding:16px;background:#FAFBFC;opacity:.75;transition:.2s ease}
+    .version.live{opacity:1;border-color:var(--ab-blue);background:#F3F8FC}
+    .verline{display:flex;justify-content:space-between;gap:15px;align-items:flex-start}
+    .ver{font-size:clamp(32px,3vw,48px);font-weight:900;letter-spacing:-.04em;color:var(--ab-blue)}
+    .hash{font-family:Consolas,"Cascadia Mono",monospace;color:var(--ra-red);font-size:16px;font-weight:800}
+    .message{margin-top:5px;color:var(--muted)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+    .btn{border:0;border-radius:10px;padding:11px 16px;min-height:44px;line-height:1.15;font-weight:850;cursor:pointer;background:var(--ra-red);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+    .btn.push{background:var(--ab-blue);color:#fff}
+    .btn.ghost{background:#fff;color:var(--ab-blue);border:1px solid var(--line)}
+    .btn:disabled{opacity:.38;cursor:not-allowed}
+    .status{min-height:25px;color:var(--muted);display:flex;align-items:center;gap:8px;line-height:1.4}
+    .status b{color:var(--ink)}
+    .result-banner{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:18px 22px;display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,.6fr);gap:22px;align-items:center}
+    .result-banner-main{display:grid;gap:10px;min-width:0}
+    .result-banner-side{display:grid;gap:10px;min-width:0}
+    .result-panel{display:grid;gap:16px;align-content:start}
+    .result-hero{border:1px solid var(--line);border-left:6px solid var(--ab-blue);border-radius:16px;background:#F7FAFC;padding:20px;display:grid;gap:12px}
+    .result-hero.ready{border-left-color:var(--ft-blue)}
+    .result-hero.success{border-left-color:var(--ab-blue);background:#F3F8FC}
+    .result-hero.neutral{border-left-color:#8A98A6;background:#FAFBFC}
+    .result-hero.fail{border-left-color:var(--ra-red);background:var(--soft-red)}
+    .result-title{font-size:clamp(26px,2.5vw,38px);font-weight:900;letter-spacing:-.025em;color:var(--ink)}
+    .result-body{font-size:16px;line-height:1.5;color:var(--muted)}
+    .result-facts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .result-fact{border:1px solid var(--line);background:#fff;border-radius:10px;padding:11px 12px}
+    .result-fact span{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);font-weight:800;margin-bottom:4px}
+    .result-fact strong{display:block;color:var(--ink);line-height:1.35}
+    .save-reminder{border:1px solid #A9DFF3;border-left:5px solid var(--ft-blue);background:var(--soft-blue);border-radius:12px;padding:13px 14px;line-height:1.45;color:var(--ink)}
+    .save-reminder strong{display:block;margin-bottom:2px}
+    .technical-details{background:#FAFBFC}
+    .technical-details[open]{padding-bottom:14px}
+    .technical-details .command-shell{margin:0 14px 12px}
+    .technical-details .console{margin:0 14px 12px;min-height:240px;max-height:420px}
+    .technical-details .troubleshooting{margin:0 14px;border-top:1px solid var(--line);padding-top:12px}
+    .technical-details .troubleshooting strong{display:block;margin-bottom:7px}
+    .technical-details .troubleshooting pre{margin:0;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+    [hidden]{display:none!important}
+    .message-entry,.setup-box{display:grid;gap:8px;padding:13px 14px;border-radius:12px;background:#FAFBFC;border:1px solid var(--line)}
+    .setup-box{border-left:5px solid var(--orange);background:var(--soft-orange)}
+    .setup-mount:empty{display:none}
+    .setup-mount .setup-box{padding:20px 22px;border-radius:16px;box-shadow:0 8px 24px rgba(32,42,51,.06)}
+    .setup-mount .setup-box>strong{font-size:22px;color:var(--ink)}
+    .setup-mount .setup-box input[type="text"]{min-height:48px;font-size:16px}
+    .message-entry input,.setup-box input[type="text"]{width:100%;min-height:42px;padding:9px 11px;border:1px solid #BCC5CD;border-radius:8px;background:#fff;color:var(--ink)}
+    .publish{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:20px;display:grid;grid-template-columns:1fr auto 1fr;gap:18px;align-items:center}
+    .publish-node{min-width:0;border-left:5px solid var(--ra-red);padding:4px 0 4px 15px}
+    .publish-node.remote{border-left-color:var(--ft-blue)}
+    .publish-node strong{display:block;font-size:18px;margin-bottom:4px}
+    .publish-node span{display:block;color:var(--muted);line-height:1.4}
+    .publish-center{display:grid;justify-items:center;gap:8px;min-width:190px}
+    .packet{border-radius:999px;background:var(--soft-blue);border:1px solid #A9DFF3;color:var(--ab-blue);font-weight:900;padding:6px 10px;min-width:54px;text-align:center}
+    .publish-arrow{font-size:26px;color:var(--ft-blue);font-weight:900;line-height:1}
+    .concept{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .concept>div{background:var(--paper);border:1px solid var(--line);border-top:4px solid var(--ra-red);border-radius:12px;padding:14px 16px}
+    .concept>div:last-child{border-top-color:var(--ft-blue)}
+    .concept strong{font-size:17px}.concept span{display:block;color:var(--muted);margin-top:3px;line-height:1.45}
+    @media(min-width:1400px) and (min-height:850px){
+      .app{max-width:1660px;gap:24px;padding-bottom:28px}
+      .kicker{font-size:15px}.badge{font-size:16px}.lead{font-size:21px}
+      .context-label,.command-label{font-size:13px}.context-value{font-size:18px}
+      .panel p{font-size:17px}.command-line{font-size:16px}.console{font-size:15px;line-height:1.62}.console,details pre{font-weight:550}details pre{font-size:15px}
+      summary{font-size:16px}.step{font-size:16px}.step strong{font-size:18px}.step small{font-size:15px}.step .num{font-size:14px}.step .mark{font-size:15px;font-weight:800}
+      .message,.status,.publish-node span,.concept span{font-size:16px}.btn{font-size:16px}.packet{font-size:15px}
+      .publish-node strong,.concept strong{font-size:20px}
+    }
+    @media(max-width:1000px){.result-banner{grid-template-columns:1fr}.main-grid{grid-template-columns:1fr}.context{grid-template-columns:1fr 1fr}.context-item:nth-child(2){border-right:0}.context-item:nth-child(-n+2){border-bottom:1px solid var(--line)}.publish{grid-template-columns:1fr}.publish-center{justify-items:start}.publish-arrow{transform:rotate(90deg)}}
+    @media(max-width:620px){.context{grid-template-columns:1fr}.context-item{border-right:0;border-bottom:1px solid var(--line)!important}.context-item:last-child{border-bottom:0!important}.concept{grid-template-columns:1fr}.top:after{display:none}.app{padding-left:14px;padding-right:14px}.panel,.publish{padding:16px}.step{grid-template-columns:34px 1fr}.step .mark{grid-column:2}}
+    @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+  </style>
+</head>
+<body>
+<main class="app">
+  <header class="top">
+    <div>
+      <div class="kicker">Logix version control</div>
+      <h1>Capture a recoverable version.</h1>
+      <div class="lead">Save the ACD in Studio 5000, describe the engineering change, and capture it into Git. The underlying Rockwell command remains available when you need the technical detail.</div>
+    </div>
+    <div class="badge">Studio 5000 → l5xgit → Git</div>
+  </header>
+
+  <section class="context" aria-label="Current project context">
+    <div class="context-item"><span class="context-label">Project</span><span class="context-value" id="projectMeta">Current ACD</span></div>
+    <div class="context-item"><span class="context-label">Branch</span><span class="context-value blue" id="branch">Not connected</span></div>
+    <div class="context-item"><span class="context-label">Repository</span><span class="context-value" id="repoMeta">Not connected</span></div>
+    <div class="context-item"><span class="context-label">State</span><span class="context-value state" id="contextState">Waiting</span></div>
+  </section>
+
+  <section id="setupMount" class="setup-mount" aria-label="Version control setup"></section>
+
+  <section class="result-banner" aria-label="Current version-control result">
+    <div class="result-banner-main">
+      <div class="kicker">Current result</div>
+      <div class="result-hero ready" id="resultHero">
+        <div class="result-title" id="resultTitle">Ready to capture</div>
+        <div class="result-body" id="resultBody">Save the ACD in Studio 5000, describe the change, then capture a version.</div>
+
+        <div class="version" id="versionCard">
+          <div class="verline"><div><div class="context-label">Current local version</div><div class="ver" id="version">—</div></div><div class="hash" id="hash">—</div></div>
+          <div class="message" id="message">No local version captured yet</div>
+        </div>
+
+        <div class="result-facts">
+          <div class="result-fact"><span>Engineering change</span><strong id="resultChangeCount">Not checked yet</strong></div>
+          <div class="result-fact"><span>Sharing</span><strong id="shareState">Local repository</strong></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-banner-side">
+      <div class="save-reminder">
+        <strong>Save in Studio 5000 first.</strong>
+        Unsaved controller edits cannot be captured. This tool always works from the ACD saved on disk.
+      </div>
+      <div class="message-entry" id="captureLoop">
+        <strong>Working loop</strong>
+        <span style="color:var(--muted);font-size:14px;line-height:1.5">Make the change in Studio 5000 → <b>Save the ACD</b> → Capture another version.</span>
+        <span style="color:var(--muted);font-size:14px;line-height:1.5" id="savedProjectStatus">This page does not capture unsaved Studio 5000 edits.</span>
+      </div>
+      <button class="btn ghost" id="openRepoBtn" type="button" style="justify-self:start">Open repository folder</button>
+    </div>
+  </section>
+
+  <section class="main-grid">
+    <article class="panel cli-panel">
+      <div>
+        <div class="kicker">Technical view</div>
+        <h2>Real CLI activity</h2>
+        <p>The Rockwell command is still the source of truth. This view is here for engineers who want to see exactly what ran.</p>
+      </div>
+
+      <div class="command-shell">
+        <span class="command-label">Equivalent command</span>
+        <code class="command-line" id="cliCommand">l5xgit.exe commit --acd "&lt;current project&gt;"</code>
+      </div>
+
+      <pre class="console" id="technical" aria-live="polite">No operation has run yet.</pre>
+
+      <details id="technicalDetails">
+        <summary>Exact paths &amp; troubleshooting context</summary>
+        <pre id="cliContext">Project context will appear when the live host connects.</pre>
+      </details>
+    </article>
+
+    <article class="panel process">
+      <div>
+        <div class="kicker">Capture workflow</div>
+        <h2>Create the next version</h2>
+        <p>Follow the saved Logix project as it becomes a recoverable Git version.</p>
+      </div>
+
+      <div class="rail" id="rail">
+        <div class="step" data-stage="copy"><span class="num">1</span><div><strong>Copy saved project</strong><br><small>Work from a safe temporary ACD copy</small></div><span class="mark">Waiting</span></div>
+        <div class="step" data-stage="export"><span class="num">2</span><div><strong>Export engineering source</strong><br><small>Open the controller and save structured Logix content</small></div><span class="mark">Waiting</span></div>
+        <div class="step" data-stage="explode"><span class="num">3</span><div><strong>Build version-control files</strong><br><small>Break the L5X into Git-friendly engineering files</small></div><span class="mark">Waiting</span></div>
+        <div class="step" data-stage="stage"><span class="num">4</span><div><strong>Compare with Git</strong><br><small>Check the generated engineering source against the current version</small></div><span class="mark">Waiting</span></div>
+        <div class="step" data-stage="commit"><span class="num">5</span><div><strong>Create new version</strong><br><small>Create a permanent local Git checkpoint only when something changed</small></div><span class="mark">Waiting</span></div>
+      </div>
+
+      <div class="actions">
+        <button class="btn" id="commitBtn">Capture version</button>
+        <button class="btn ghost" id="refreshStatusBtn">Refresh status</button>
+      </div>
+      <div class="status" id="commitStatus" aria-live="polite">Save the ACD in Studio 5000, then capture a version.</div>
+    </article>
+  </section>
+
+  <section class="publish" id="publishSection" aria-label="Local and remote version status">
+    <div class="publish-node">
+      <strong>Local version</strong>
+      <span id="localPublishState">Capture creates the recoverable version here first.</span>
+    </div>
+    <div class="publish-center">
+      <div class="packet" id="packet">—</div>
+      <div class="publish-arrow">→</div>
+      <button class="btn push" id="pushBtn" disabled>Publish to remote</button>
+      <div class="status" id="pushStatus" aria-live="polite">No remote repository configured.</div>
+    </div>
+    <div class="publish-node remote">
+      <strong>Remote repository</strong>
+      <span id="remoteState">Not configured</span>
+    </div>
+  </section>
+
+  <section class="concept">
+    <div><strong>Version control preserves engineering history.</strong><span>Git records the source revision and collaboration history. It does not decide whether a controls change is safe or correct.</span></div>
+    <div><strong>Commit locally, publish deliberately.</strong><span>Capture creates the recoverable local version. Publishing sends that exact version to the configured remote repository.</span></div>
+  </section>
+</main>
+<script>
+(() => {
+  const state = {
+    hostConnected: false,
+    busy: false,
+    lastCommit: null,
+    lastPublishedCommit: null,
+    lastOperation: null,
+    context: null,
+  };
+
+  const stageOrder = ['copy', 'export', 'explode', 'stage', 'commit'];
+  const technical = document.getElementById('technical');
+  const version = document.getElementById('version');
+  const hash = document.getElementById('hash');
+  const message = document.getElementById('message');
+  const versionCard = document.getElementById('versionCard');
+  const packet = document.getElementById('packet');
+  const commitBtn = document.getElementById('commitBtn');
+  const pushBtn = document.getElementById('pushBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const commitStatus = document.getElementById('commitStatus');
+  const pushStatus = document.getElementById('pushStatus');
+  const contextState = document.getElementById('contextState');
+  const projectMeta = document.getElementById('projectMeta');
+  const branch = document.getElementById('branch');
+  const repoMeta = document.getElementById('repoMeta');
+  const cliCommand = document.getElementById('cliCommand');
+  const cliContext = document.getElementById('cliContext');
+
+  function safeText(value, fallback = '—') {
+    return value === null || value === undefined || value === '' ? fallback : String(value);
+  }
+
+  function setContext(ctx) {
+    state.context = ctx || null;
+    state.hostConnected = !!ctx;
+    projectMeta.textContent = safeText(ctx?.acd_name, 'Current ACD');
+    branch.textContent = safeText(ctx?.branch, 'Not connected');
+    repoMeta.textContent = safeText(ctx?.repo_root, 'Not connected');
+    cliCommand.textContent = safeText(ctx?.commit_command, 'l5xgit.exe commit --acd "<current project>"');
+    cliContext.textContent = ctx
+      ? `ACD: ${safeText(ctx.acd_path)}\nRepository: ${safeText(ctx.repo_root)}\nBranch: ${safeText(ctx.branch)}\nConfig: ${safeText(ctx.config_path)}\nCommand: ${safeText(ctx.commit_command)}`
+      : 'Project context will appear when the live host connects.';
+    contextState.textContent = ctx ? 'Live host connected' : 'Waiting';
+  }
+
+  function resetRail() {
+    document.querySelectorAll('.step').forEach(el => {
+      el.className = 'step';
+      el.querySelector('.mark').textContent = 'Waiting';
+    });
+  }
+
+  function updateStage(stage, status, label) {
+    const el = document.querySelector(`[data-stage="${stage}"]`);
+    if (!el) return;
+    el.className = `step ${status}`;
+    el.querySelector('.mark').textContent = label;
+  }
+
+  function processLine(line) {
+    const text = String(line || '').trim();
+    if (!text) return;
+    if (/copy/i.test(text)) updateStage('copy', 'active', 'Running');
+    if (/convert|acd.*l5x|creating.*l5x/i.test(text)) {
+      updateStage('copy', 'done', 'Done');
+      updateStage('export', 'active', 'Running');
+    }
+    if (/l5xplod|explod/i.test(text)) {
+      updateStage('export', 'done', 'Done');
+      updateStage('explode', 'active', 'Running');
+    }
+    if (/git add|stag/i.test(text)) {
+      updateStage('explode', 'done', 'Done');
+      updateStage('stage', 'active', 'Running');
+    }
+    if (/commit/i.test(text) && !/commit --acd/i.test(text)) {
+      updateStage('stage', 'done', 'Done');
+      updateStage('commit', 'active', 'Running');
+    }
+  }
+
+  function showCommit(commit) {
+    if (!commit) return;
+    state.lastCommit = commit;
+    versionCard.classList.add('live');
+    hash.textContent = safeText(commit.short_sha || commit.sha);
+    version.textContent = safeText(commit.sequence || 'Captured');
+    message.textContent = safeText(commit.message, 'Version captured');
+    packet.textContent = safeText(commit.short_sha || commit.sha);
+    pushBtn.disabled = false;
+    stageOrder.forEach(s => updateStage(s, 'done', 'Done'));
+  }
+
+  async function fetchContext() {
+    try {
+      const res = await fetch('/api/context', {cache: 'no-store'});
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      setContext(await res.json());
+    } catch (_) {
+      setContext(null);
+    }
+  }
+
+  async function runOperation(endpoint, statusEl, actionLabel) {
+    if (state.busy) return;
+    state.busy = true;
+    commitBtn.disabled = true;
+    pushBtn.disabled = true;
+    technical.textContent = '';
+    statusEl.innerHTML = `<b>${actionLabel}</b> Running real command…`;
+    contextState.textContent = 'Command running';
+
+    try {
+      const response = await fetch(endpoint, {method: 'POST'});
+      if (!response.ok) {
+        let body = await response.text();
+        throw new Error(body || `HTTP ${response.status}`);
+      }
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      while (true) {
+        const {done, value} = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, {stream:true});
+        const lines = buffer.split(/\r?\n/);
+        buffer = lines.pop();
+        for (const line of lines) {
+          if (!line) continue;
+          let evt;
+          try { evt = JSON.parse(line); } catch { evt = {type:'output', text:line}; }
+          if (evt.type === 'output') {
+            technical.textContent += `${evt.text}\n`;
+            processLine(evt.text);
+            technical.scrollTop = technical.scrollHeight;
+          } else if (evt.type === 'result') {
+            state.lastOperation = evt;
+            if (evt.commit) showCommit(evt.commit);
+            if (evt.ok) {
+              statusEl.innerHTML = `<b>${actionLabel}</b> Completed successfully.`;
+              contextState.textContent = 'Completed';
+              if (endpoint.includes('push') && evt.commit) {
+                state.lastPublishedCommit = evt.commit.sha;
+                pushStatus.innerHTML = `<b>Published.</b> Shared repository now includes ${safeText(evt.commit.short_sha || evt.commit.sha)}.`;
+              }
+            } else {
+              throw new Error(evt.error || `${actionLabel} failed`);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      statusEl.innerHTML = `<b>${actionLabel} failed.</b> ${safeText(err.message, 'See console output.')}`;
+      contextState.textContent = 'Needs attention';
+      const active = document.querySelector('.step.active');
+      if (active) {
+        active.classList.remove('active');
+        active.classList.add('fail');
+        active.querySelector('.mark').textContent = 'Failed';
+      }
+    } finally {
+      state.busy = false;
+      commitBtn.disabled = !state.hostConnected;
+      pushBtn.disabled = !state.hostConnected || !state.lastCommit || state.lastPublishedCommit === state.lastCommit.sha;
+    }
+  }
+
+  // Public presentation API consumed by host/live.js.
+  // Keeping the visual state mutations here lets the live host orchestrate
+  // the same page without duplicating the presentation implementation.
+  window.LogixVcsVisual = {
+    reset() {
+      resetRail();
+      technical.textContent = 'No operation has run yet.';
+      versionCard.classList.remove('live');
+      hash.textContent = '—';
+      message.textContent = 'No local version captured yet';
+      commitStatus.textContent = 'Ready.';
+      pushStatus.textContent = 'Capture a version before publishing.';
+    },
+    setMeta(meta = {}) {
+      if (meta.branch !== undefined) branch.textContent = safeText(meta.branch, 'Not connected');
+      if (meta.version !== undefined) version.textContent = safeText(meta.version, '—');
+    },
+    setStage(stage, status, detail) {
+      const label = status === 'done' ? 'Done' : status === 'active' ? 'Running' : status === 'fail' ? 'Failed' : 'Waiting';
+      updateStage(stage, status, label);
+      if (detail) {
+        technical.textContent += `${detail}\n`;
+        technical.scrollTop = technical.scrollHeight;
+      }
+    },
+    log(line) {
+      if (!line) return;
+      if (technical.textContent === 'No operation has run yet.') technical.textContent = '';
+      technical.textContent += `${line}\n`;
+      technical.scrollTop = technical.scrollHeight;
+    },
+    commitSuccess(commit) {
+      showCommit({
+        sha: commit.sha,
+        short_sha: commit.sha ? commit.sha.slice(0, 7) : undefined,
+        sequence: commit.version,
+        message: commit.message
+      });
+      commitStatus.innerHTML = '<b>Version captured.</b>';
+      pushStatus.textContent = 'Captured version is available to publish.';
+    },
+    commitFailure(messageText) {
+      commitStatus.innerHTML = `<b>Capture failed.</b> ${safeText(messageText, 'See technical details.')}`;
+      const active = document.querySelector('.step.active');
+      if (active) {
+        active.classList.remove('active');
+        active.classList.add('fail');
+        active.querySelector('.mark').textContent = 'Failed';
+      }
+    },
+    pushStart() {
+      pushStatus.innerHTML = '<b>Publishing.</b> Sending captured version to the shared repository…';
+    },
+    pushSuccess(data = {}) {
+      state.lastPublishedCommit = data.sha || state.lastCommit?.sha || null;
+      pushStatus.innerHTML = `<b>Published.</b> Shared repository now includes ${safeText(data.version || data.sha)}.`;
+    },
+    pushFailure(messageText) {
+      pushStatus.innerHTML = `<b>Publish failed.</b> ${safeText(messageText, 'See technical details.')}`;
+    }
+  };
+
+  commitBtn.addEventListener('click', () => {
+    if (window.__LogixLiveHost) return;
+    resetRail();
+    runOperation('/api/commit', commitStatus, 'Capture version');
+  });
+  pushBtn.addEventListener('click', () => {
+    if (window.__LogixLiveHost) return;
+    runOperation('/api/push', pushStatus, 'Publish version');
+  });
+  resetBtn?.addEventListener('click', () => {
+    resetRail();
+    technical.textContent = 'No operation has run yet.';
+    commitStatus.textContent = 'Ready.';
+    pushStatus.textContent = state.lastCommit ? 'Captured version is available to publish.' : 'Capture a version before publishing.';
+    contextState.textContent = state.hostConnected ? 'Live host connected' : 'Waiting';
+  });
+
+  if (!window.__LogixLiveHost) {
+    fetchContext().then(() => {
+      commitBtn.disabled = !state.hostConnected;
+    });
+  }
+})();
+</script>
+</body>
+</html>
