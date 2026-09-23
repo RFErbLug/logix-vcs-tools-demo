@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logix VCS Tools — Commit (Static Demo)</title>
+<style>
+:root{
+  --ra-red:#CD163F;--ab-blue:#003E7E;--ft-blue:#00AEEF;--orange:#F58025;
+  --ink:#202A33;--muted:#5F6B76;--bg:#F5F7F9;--paper:#FFFFFF;--line:#D7DDE2;
+  --soft-blue:#EAF7FC;--soft-red:#FCEEF2;--soft-orange:#FFF3E9;
+  --green:#1C6B4A;--console:#18222C;--console-text:#EAF0F4
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:Barlow,Arial,"Segoe UI",system-ui,sans-serif}
+.app{max-width:1500px;margin:auto;padding:0 clamp(18px,3vw,44px) 40px;border-top:6px solid var(--ra-red);display:grid;gap:20px}
+.top{padding-top:30px;display:flex;justify-content:space-between;gap:20px;align-items:flex-end;flex-wrap:wrap}
+.kicker{font-size:12px;text-transform:uppercase;letter-spacing:.16em;color:var(--ra-red);font-weight:900}
+h1{font-size:clamp(38px,5vw,66px);line-height:.98;letter-spacing:-.04em;margin:7px 0 8px}
+.lead{font-size:18px;color:var(--muted);max-width:950px;line-height:1.45}
+.badge{border:1px solid var(--line);background:var(--paper);border-radius:999px;padding:9px 13px;font-weight:800;color:var(--muted)}
+.demo-note{border:1px solid #E9C39C;border-left:6px solid var(--orange);background:var(--soft-orange);border-radius:14px;padding:12px 15px;line-height:1.45}
+.context{display:grid;grid-template-columns:1.1fr .7fr 1.5fr .7fr;border:1px solid var(--line);background:var(--paper);border-radius:16px;overflow:hidden}
+.context>div{padding:13px 16px;border-right:1px solid var(--line);min-width:0}.context>div:last-child{border-right:0}
+.label{font-size:11px;text-transform:uppercase;letter-spacing:.11em;color:var(--muted);font-weight:900;margin-bottom:4px}
+.value{font-weight:850;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.blue{color:var(--ab-blue)}.red{color:var(--ra-red)}
+.panel{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:22px;min-width:0}
+.panel h2{font-size:30px;margin:5px 0 6px;letter-spacing:-.025em}.panel p{margin:0;color:var(--muted);line-height:1.5}
+.grid{display:grid;grid-template-columns:minmax(0,1.03fr) minmax(460px,.97fr);gap:18px;align-items:stretch}
+.console{margin:14px 0 0;background:var(--console);color:var(--console-text);border-radius:14px;padding:18px 20px;font-family:"Cascadia Mono","Cascadia Code",Consolas,monospace;font-size:13.5px;font-weight:550;line-height:1.58;white-space:pre-wrap;overflow:auto;min-height:330px;border-left:5px solid var(--ft-blue)}
+.plan{display:grid;gap:9px;margin-top:16px}
+.step{display:grid;grid-template-columns:34px 1fr auto;gap:10px;align-items:center;border:1px solid var(--line);border-radius:11px;padding:11px 12px;color:var(--muted);background:#FBFCFD}
+.step .n{width:29px;height:29px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line);font-weight:900;color:var(--ab-blue);background:#fff}
+.step strong{color:var(--ink)}
+.step.done{border-color:#9FB6C9;background:#F5F9FC}.step.done .n{background:var(--ab-blue);color:#fff;border-color:transparent}
+.step.active{border-color:var(--ft-blue);background:var(--soft-blue);box-shadow:inset 4px 0 0 var(--ft-blue)}.step.active .n{background:var(--ft-blue);color:#062336;border-color:transparent}
+.step.wait{border-color:var(--orange);background:var(--soft-orange);box-shadow:inset 4px 0 0 var(--orange)}.step.wait .n{background:var(--orange);color:#fff;border-color:transparent}
+.callout{margin-top:14px;border:1px solid #A9DFF3;border-left:6px solid var(--ft-blue);background:var(--soft-blue);border-radius:14px;padding:15px 16px;line-height:1.5}
+.callout strong{display:block;font-size:18px;margin-bottom:3px}
+.callout.success{border-color:#A8CEBB;border-left-color:var(--green);background:#F1F8F4}
+.btn{border:0;border-radius:10px;min-height:44px;padding:11px 16px;font-weight:850;background:var(--ra-red);color:#fff;display:inline-flex;align-items:center;justify-content:center}
+.btn.blue{background:var(--ab-blue)}
+.btn.ghost{background:#fff;color:var(--ab-blue);border:1px solid var(--line)}
+.actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+.footer3{border:1px solid var(--line);background:var(--paper);border-radius:18px;padding:18px 20px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+.footer3>div{border-left:5px solid var(--ab-blue);padding:3px 0 3px 14px}.footer3>div:nth-child(2){border-left-color:var(--orange)}.footer3>div:nth-child(3){border-left-color:var(--green)}
+.footer3 strong{display:block;font-size:17px;margin-bottom:4px}.footer3 span{display:block;color:var(--muted);line-height:1.45}
+.version-card{border:1px solid var(--line);border-radius:13px;padding:14px;background:#FBFCFD}
+.version-card.selected{border-color:var(--ab-blue);box-shadow:inset 4px 0 0 var(--ab-blue);background:#F3F8FC}
+.ver{font-size:30px;font-weight:950;color:var(--ab-blue)}.sha{font-family:Consolas,monospace;color:var(--ra-red);font-weight:800}.msg{font-weight:750}.small{font-size:12px;color:var(--muted)}
+.versions{display:grid;grid-template-columns:repeat(3,minmax(220px,1fr));gap:10px}
+.result{border:1px solid var(--line);border-left:6px solid var(--ab-blue);background:#F3F8FC;border-radius:16px;padding:18px}
+.result-title{font-size:30px;font-weight:900}.result-body{color:var(--muted);margin-top:6px;line-height:1.5}
+.compare-sides{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.side{border:1px solid var(--line);border-radius:14px;padding:16px;background:#FBFCFD}.side h3{margin:3px 0 5px}.side.left{border-top:5px solid var(--ab-blue)}.side.right{border-top:5px solid var(--ft-blue)}
+a.nav{display:inline-block;margin:0 7px 0 0;text-decoration:none;color:var(--ab-blue);font-weight:800}
+nav{padding-top:14px}
+@media(max-width:1000px){.grid,.compare-sides{grid-template-columns:1fr}.context{grid-template-columns:1fr 1fr}.footer3{grid-template-columns:1fr}.versions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="app">
+<nav><a class="nav" href="commit.html">Commit</a><a class="nav" href="compare.html">Compare</a><a class="nav" href="restore.html">Restore</a></nav>
+
+<header class="top">
+  <div><div class="kicker">Logix version control</div><h1>Capture a recoverable version.</h1>
+  <div class="lead">Save the ACD in Studio 5000, describe the engineering change, and capture it into Git.</div></div>
+  <div class="badge">Studio 5000 → l5xgit → Git</div>
+</header>
+<div class="demo-note"><strong>Static UI preview.</strong> This page is for screenshots, demos, and design review only. It does not execute Git or Studio 5000 operations.</div>
+<section class="context">
+  <div><div class="label">Project</div><div class="value">custom_tools.ACD</div></div>
+  <div><div class="label">Branch</div><div class="value blue">main</div></div>
+  <div><div class="label">Repository</div><div class="value">C:\Projects\custom_tools-vcs</div></div>
+  <div><div class="label">State</div><div class="value">Ready</div></div>
+</section>
+<section class="result">
+  <div class="kicker">Current result</div>
+  <div class="result-title">V3 captured successfully</div>
+  <div class="result-body">The saved ACD differs from V2. A new local Git version was created and is ready to publish.</div>
+  <div style="margin-top:14px"><span class="ver">V3</span> &nbsp; <span class="sha">1c4fe82</span><div class="msg">Add permissive and update pump sequence</div></div>
+</section>
+<section class="grid">
+  <article class="panel">
+    <div class="kicker">Technical view</div><h2>Real CLI activity</h2>
+    <p>The live product shows the actual Rockwell/Git activity here.</p>
+    <pre class="console">Copy saved ACD: C:\Projects\custom_tools.ACD
+Export engineering source...
+Open project started
+Open project succeeded
+Save As succeeded
+Exploding L5X into version-control files...
+Comparing generated source with Git...
+12 source files changed
+[main 1c4fe82] Add permissive and update pump sequence
+Version created: V3</pre>
+  </article>
+  <article class="panel">
+    <div class="kicker">Capture workflow</div><h2>Create the next version</h2>
+    <div class="plan">
+      <div class="step done"><span class="n">1</span><div><strong>Copy saved project</strong><br><span class="small">Work from a safe temporary ACD copy</span></div><b>Done</b></div>
+      <div class="step done"><span class="n">2</span><div><strong>Export engineering source</strong><br><span class="small">Create structured Logix content</span></div><b>Done</b></div>
+      <div class="step done"><span class="n">3</span><div><strong>Build version-control files</strong><br><span class="small">Create Git-friendly engineering files</span></div><b>Done</b></div>
+      <div class="step done"><span class="n">4</span><div><strong>Compare with Git</strong><br><span class="small">Engineering changes found</span></div><b>Changed</b></div>
+      <div class="step done"><span class="n">5</span><div><strong>Create new version</strong><br><span class="small">Permanent local Git checkpoint</span></div><b>V3</b></div>
+    </div>
+    <div class="actions"><span class="btn">Capture another version</span><span class="btn ghost">Refresh status</span></div>
+    <div class="callout success"><strong>Version captured.</strong> Save another engineering change in Studio 5000 when you are ready for the next checkpoint.</div>
+  </article>
+</section>
+<section class="footer3">
+  <div><strong>Local version</strong><span>V3 · 1c4fe82</span></div>
+  <div><strong>Publish</strong><span>Local version is ready to send to the configured remote repository.</span></div>
+  <div><strong>Remote repository</strong><span>origin/main · V2 currently published</span></div>
+</section>
+
+</main>
+</body>
+</html>
