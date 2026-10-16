@@ -1,5 +1,15 @@
 # Security
 
+> **SHOWCASE / DEMO ONLY — NOT A PRODUCT**
+>
+> This repository is an unofficial engineering showcase demonstrating possible Studio 5000 Logix Designer version-control workflows. It is **not** a Rockwell Automation product, official sample, supported offering, validated reference architecture, customer standard, or production deployment framework.
+>
+> The original material in this repository is **not offered as open-source software**, and no open-source license is granted for that original material. Public and third-party components used or referenced by the demo remain governed by their own licenses. References to Rockwell Automation products describe technologies used in the demonstration and do not imply official product status, endorsement, or support.
+
+This document describes safeguards used by the demo implementation. It is not
+an official Rockwell Automation security guide, product hardening guide, or
+production deployment recommendation.
+
 ## Local-only web hosts
 
 The v0.1 hosts bind to `127.0.0.1` by default:

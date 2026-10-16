@@ -1,8 +1,14 @@
-# Logix VCS Tools
+# Logix VCS Workflow Showcase
 
-A Windows companion toolkit for bringing a simple, visual Git workflow into **Studio 5000 Logix Designer**.
+> **SHOWCASE / DEMO ONLY — NOT A PRODUCT**
+>
+> This repository is an unofficial engineering showcase demonstrating possible Studio 5000 Logix Designer version-control workflows. It is **not** a Rockwell Automation product, official sample, supported offering, validated reference architecture, customer standard, or production deployment framework.
+>
+> The original material in this repository is **not offered as open-source software**, and no open-source license is granted for that original material. Public and third-party components used or referenced by the demo remain governed by their own licenses. References to Rockwell Automation products describe technologies used in the demonstration and do not imply official product status, endorsement, or support.
 
-The toolkit wraps real Git and Rockwell Automation `l5xgit` operations with browser-based workflows for:
+An unofficial Windows demonstration of how a simple, visual Git workflow could be presented inside **Studio 5000 Logix Designer**.
+
+The demo tooling wraps real Git and Rockwell Automation `l5xgit` operations with browser-based presentation workflows for:
 
 - **Commit** — capture the saved ACD as a recoverable engineering version.
 - **Compare Version** — compare a historical Git version with the current saved project in **Logix Designer Compare Tool**.
@@ -13,7 +19,7 @@ Two optional auxiliary tools are also included:
 - **Difftool - WinMerge**
 - **Difftool - SourceTree**
 
-> **Status:** v0.1.0 packages the proven three-host architecture. Commit, native Logix Compare, and browser-based Restore have all been exercised end to end in the development environment.
+> **Status:** Demo snapshot v0.1.0 records the three-host workflow exercised in the development environment. This is demonstration evidence only and is not a product qualification, support statement, or compatibility guarantee.
 
 ## What the Studio 5000 Tools menu looks like
 
@@ -98,7 +104,7 @@ Run the prerequisite checker:
 .\scripts\check-prereqs.ps1 -L5xGitPath 'C:\path\to\l5xgit.exe'
 ```
 
-## Install
+## Demo installation
 
 Open **PowerShell as Administrator** from the repository root.
 
@@ -115,7 +121,7 @@ If Logix Designer Compare Tool is in a nonstandard location:
   -RslComparePath 'C:\path\to\RSLCompare.exe'
 ```
 
-The installer:
+For the demonstration workstation, the installer:
 
 1. publishes all three .NET hosts;
 2. installs them under `C:\ProgramData\LogixVcsTools`;
@@ -221,20 +227,16 @@ Run elevated:
 
 This restores the backed-up `CustomToolsMenu.xml`.
 
-## Sharing this package as its own GitHub repository
+## Repository boundary
 
-This directory is intentionally self-contained.
+This repository exists to preserve and demonstrate the showcase implementation.
 
-If GitHub CLI is installed and authenticated:
+It is not published as a reusable software distribution, supported installation
+package, official reference architecture, or open-source project.
 
-```powershell
-.\scripts\publish-github.ps1 `
-  -Repository 'your-account/logix-vcs-tools' `
-  -Visibility private
-```
-
-Use `-Visibility public` only after you have reviewed your organization/company requirements and selected an appropriate license.
-
+Any reuse outside the demonstration requires separate review of ownership,
+licensing, security, compatibility, validation, deployment, and support
+requirements.
 ## Project status
 
-This is an engineering prototype/toolkit, not a Rockwell Automation product or supported product feature. Test it in an appropriate non-production environment before relying on it for production recovery.
+This is an unofficial engineering showcase, not a Rockwell Automation product, supported feature, official sample, or production recovery solution. The demonstrated workflows should not be interpreted as a support, compatibility, deployment, or lifecycle commitment.

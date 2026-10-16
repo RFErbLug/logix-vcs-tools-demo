@@ -1,8 +1,14 @@
 # Quick Start
 
+> **SHOWCASE / DEMO ONLY — NOT A PRODUCT**
+>
+> This repository is an unofficial engineering showcase demonstrating possible Studio 5000 Logix Designer version-control workflows. It is **not** a Rockwell Automation product, official sample, supported offering, validated reference architecture, customer standard, or production deployment framework.
+>
+> The original material in this repository is **not offered as open-source software**, and no open-source license is granted for that original material. Public and third-party components used or referenced by the demo remain governed by their own licenses. References to Rockwell Automation products describe technologies used in the demonstration and do not imply official product status, endorsement, or support.
+
 **New here? Start here.**
 
-This is the shortest path from a fresh clone to using Logix VCS Tools inside Studio 5000.
+This is the shortest path for reproducing the VCS showcase on a demonstration workstation.
 
 ## 1. Prerequisites
 
@@ -51,7 +57,7 @@ You should see the required components reported as found.
 
 ---
 
-## 4. Install Logix VCS Tools
+## 4. Install the demo tooling
 
 Open **PowerShell as Administrator** in the repository folder.
 
@@ -283,8 +289,8 @@ For more detail:
 
 ## Important note
 
-This repository is an engineering demo/prototype.
+This repository is an unofficial engineering showcase/demo.
 
-It is not a supported Rockwell Automation product or official product feature.
+It is not a Rockwell Automation product, official sample, supported product feature, validated reference architecture, or production deployment framework.
 
-Test it with an appropriate non-production project before relying on it for production recovery.
+The demonstrated workflow is for presentation and engineering exploration only; it should not be relied upon as a production recovery or support mechanism.

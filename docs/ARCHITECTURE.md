@@ -1,8 +1,14 @@
 # Architecture
 
+> **SHOWCASE / DEMO ONLY — NOT A PRODUCT**
+>
+> This repository is an unofficial engineering showcase demonstrating possible Studio 5000 Logix Designer version-control workflows. It is **not** a Rockwell Automation product, official sample, supported offering, validated reference architecture, customer standard, or production deployment framework.
+>
+> The original material in this repository is **not offered as open-source software**, and no open-source license is granted for that original material. Public and third-party components used or referenced by the demo remain governed by their own licenses. References to Rockwell Automation products describe technologies used in the demonstration and do not imply official product status, endorsement, or support.
+
 ## Design goals
 
-The toolkit keeps the real engineering tools authoritative:
+The showcase keeps the real engineering tools authoritative:
 
 ```text
 Studio 5000
@@ -27,7 +33,7 @@ CompareHost  127.0.0.1:5191
 RestoreHost  127.0.0.1:5192
 ```
 
-Reasons for keeping this architecture in v0.1:
+Reasons for keeping this architecture in the v0.1 demo snapshot:
 
 - each workflow was developed and proofed independently;
 - failures stay isolated;
@@ -156,4 +162,4 @@ Not part of v0.1:
 - branch creation/switching;
 - CI/CD and test-console integration.
 
-CI/CD should remain a separate product surface from the VCS workflow even if the systems integrate later.
+CI/CD should remain a separate demo surface from the VCS workflow even if the systems integrate later.
