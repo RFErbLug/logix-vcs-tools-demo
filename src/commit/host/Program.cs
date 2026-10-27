@@ -268,73 +268,150 @@ async Task<object> BuildMetaAsync()
     };
 }
 
+async Task<string?> FindContainingGitRootAsync(string destinationPath)
+{
+    var probe = Path.GetFullPath(destinationPath);
+
+    // The requested destination may not exist yet. Walk upward until an
+    // existing directory is found, then ask Git whether that directory is
+    // already part of a repository.
+    while (!Directory.Exists(probe))
+    {
+        var parent = Directory.GetParent(probe);
+        if (parent is null)
+            return null;
+
+        probe = parent.FullName;
+    }
+
+    var root = await GitCaptureAsync(probe, "rev-parse", "--show-toplevel");
+
+    return string.IsNullOrWhiteSpace(root)
+        ? null
+        : Path.GetFullPath(root);
+}
+
 async Task<IResult> ConfigureProjectAsync(SetupRequest request)
 {
     if (string.IsNullOrWhiteSpace(options.ProjectPath) || !File.Exists(options.ProjectPath))
         return Results.BadRequest(new { error = "Project path is missing or does not exist." });
 
+    // RepositoryPath is retained in the API contract for compatibility, but
+    // it now means the desired Logix-source destination_path.
     var requestedPath = request.RepositoryPath?.Trim().Trim('"');
-    if (string.IsNullOrWhiteSpace(requestedPath))
-        return Results.BadRequest(new { error = "Choose the folder where this project's Git repository should live." });
 
-    string requestedRepoPath;
+    if (string.IsNullOrWhiteSpace(requestedPath))
+        return Results.BadRequest(new
+        {
+            error = "Choose the folder where this project's exploded Logix source should live."
+        });
+
+    string requestedDestinationPath;
+
     try
     {
-        requestedRepoPath = Path.GetFullPath(requestedPath);
+        requestedDestinationPath = Path.GetFullPath(requestedPath);
     }
     catch (Exception ex)
     {
-        return Results.BadRequest(new { error = $"The repository folder is not a valid path: {ex.Message}" });
+        return Results.BadRequest(new
+        {
+            error = $"The Logix source folder is not a valid path: {ex.Message}"
+        });
     }
 
-    if (File.Exists(requestedRepoPath))
-        return Results.BadRequest(new { error = "The repository location must be a folder, not a file." });
+    if (File.Exists(requestedDestinationPath))
+        return Results.BadRequest(new
+        {
+            error = "The Logix source destination must be a folder, not a file."
+        });
 
     string repoRoot;
-    var existingRoot = Directory.Exists(requestedRepoPath)
-        ? await GitCaptureAsync(requestedRepoPath, "rev-parse", "--show-toplevel")
-        : null;
+    string destinationPath;
+
+    var existingRoot = await FindContainingGitRootAsync(requestedDestinationPath);
 
     if (!string.IsNullOrWhiteSpace(existingRoot))
     {
+        // Existing larger repositories are explicitly supported.
+        // The exact selected folder becomes destination_path.
         repoRoot = Path.GetFullPath(existingRoot);
-        if (!string.Equals(
-                repoRoot.TrimEnd(Path.DirectorySeparatorChar),
-                requestedRepoPath.TrimEnd(Path.DirectorySeparatorChar),
-                StringComparison.OrdinalIgnoreCase))
+
+        var normalizedRoot = repoRoot.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar);
+
+        var normalizedDestination = requestedDestinationPath.TrimEnd(
+            Path.DirectorySeparatorChar,
+            Path.AltDirectorySeparatorChar);
+
+        if (string.Equals(
+            normalizedRoot,
+            normalizedDestination,
+            StringComparison.OrdinalIgnoreCase))
         {
             return Results.BadRequest(new
             {
-                error = $"'{requestedRepoPath}' is already inside another Git repository at '{repoRoot}'. Choose that repository root or a new dedicated folder."
+                error =
+                    "Choose a project subfolder inside the Git repository, " +
+                    "not the repository root itself. Example: 01-vcs\\exploded-content."
             });
         }
+
+        var rootPrefix = normalizedRoot + Path.DirectorySeparatorChar;
+
+        if (!normalizedDestination.StartsWith(
+            rootPrefix,
+            StringComparison.OrdinalIgnoreCase))
+        {
+            return Results.BadRequest(new
+            {
+                error =
+                    $"The selected Logix source folder is not inside the detected Git repository '{repoRoot}'."
+            });
+        }
+
+        destinationPath = requestedDestinationPath;
+        Directory.CreateDirectory(destinationPath);
     }
     else
     {
+        // Backward-compatible dedicated-repository mode.
+        // If no containing Git repository exists, create one at the selected
+        // location and put the Logix source in its exploded-content child.
         if (!request.InitializeRepoIfMissing)
         {
             return Results.BadRequest(new
             {
-                error = $"No Git repository was found at '{requestedRepoPath}'. Enable 'Create Git repository if needed' or choose an existing repository root."
+                error =
+                    $"No containing Git repository was found for '{requestedDestinationPath}'. " +
+                    "Choose a folder inside an existing Git repository or enable creation of a dedicated repository."
             });
         }
 
-        Directory.CreateDirectory(requestedRepoPath);
-        var init = await RunGitInitAsync(requestedRepoPath);
+        Directory.CreateDirectory(requestedDestinationPath);
+
+        var init = await RunGitInitAsync(requestedDestinationPath);
+
         if (init.ExitCode != 0)
         {
             return Results.BadRequest(new
             {
-                error = init.Errors.LastOrDefault() ?? $"git init exited with code {init.ExitCode}."
+                error = init.Errors.LastOrDefault()
+                    ?? $"git init exited with code {init.ExitCode}."
             });
         }
-        repoRoot = requestedRepoPath;
+
+        repoRoot = requestedDestinationPath;
+        destinationPath = Path.Combine(repoRoot, "exploded-content");
+
+        Directory.CreateDirectory(destinationPath);
     }
 
-    var destinationPath = Path.Combine(repoRoot, "exploded-content");
-    Directory.CreateDirectory(destinationPath);
+    var config = new ConfigInfo(
+        destinationPath,
+        request.PromptForCommitMessage);
 
-    var config = new ConfigInfo(destinationPath, request.PromptForCommitMessage);
     state.SaveConfig(config);
 
     events.Publish(new
@@ -342,19 +419,27 @@ async Task<IResult> ConfigureProjectAsync(SetupRequest request)
         type = "raw",
         line = $"Project version-control configuration saved: {state.ConfigPath}"
     });
+
     events.Publish(new
     {
         type = "raw",
-        line = $"Git repository: {repoRoot}"
+        line = $"Git repository root: {repoRoot}"
     });
+
     events.Publish(new
     {
         type = "raw",
-        line = $"Exploded Logix content: {destinationPath}"
+        line = $"Logix source destination: {destinationPath}"
     });
 
     var meta = await BuildMetaAsync();
-    events.Publish(new { type = "configured", meta });
+
+    events.Publish(new
+    {
+        type = "configured",
+        meta
+    });
+
     return Results.Json(meta);
 }
 

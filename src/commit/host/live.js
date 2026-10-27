@@ -308,7 +308,7 @@
     title.textContent = 'Connect this project to Version Control';
 
     const helper = document.createElement('span');
-    helper.textContent = `One-time setup for ${meta.projectFileName || 'this ACD'}. Choose a Git repository folder. The tool creates/uses Git there, creates an exploded-content folder inside it, and writes ${meta.projectName || '<Project>'}_L5xGit.yml beside the ACD.`;
+    helper.textContent = `One-time setup for ${meta.projectFileName || 'this ACD'}. Choose the exact folder where this project's exploded Logix source should live. That folder may be inside a larger Git repository. The tool detects the repository root separately and writes ${meta.projectName || '<Project>'}_L5xGit.yml beside the ACD.`;
     helper.style.color = 'var(--muted)';
     helper.style.fontSize = '16px';
     helper.style.lineHeight = '1.55';
@@ -318,7 +318,7 @@
     pathLabel.style.gap = '6px';
 
     const pathTitle = document.createElement('span');
-    pathTitle.textContent = 'Version-control repository folder';
+    pathTitle.textContent = 'Logix source destination folder';
     pathTitle.style.fontWeight = '800';
 
     const pathInput = document.createElement('input');
@@ -341,7 +341,7 @@
     browseButton.type = 'button';
     browseButton.className = 'btn ghost';
     browseButton.textContent = 'Browse…';
-    browseButton.title = 'Choose a repository folder in Windows';
+    browseButton.title = 'Choose the Logix source destination folder in Windows';
 
     browseButton.addEventListener('click', async () => {
       browseButton.disabled = true;
@@ -350,7 +350,7 @@
         const picked = await post('/api/pick-folder', { initialPath: pathInput.value.trim() });
         if (picked?.path) {
           pathInput.value = picked.path;
-          setupStatus.textContent = 'Repository folder selected.';
+          setupStatus.textContent = 'Logix source folder selected.';
           pathInput.focus();
         } else {
           setupStatus.textContent = 'Folder selection canceled.';
@@ -381,7 +381,7 @@
     const initInput = document.createElement('input');
     initInput.type = 'checkbox';
     initInput.checked = true;
-    initLabel.append(initInput, document.createTextNode('Create Git repository here if needed'));
+    initLabel.append(initInput, document.createTextNode('If no containing Git repository exists, create a dedicated repository here'));
 
     const setupButton = document.createElement('button');
     setupButton.type = 'button';
@@ -404,7 +404,7 @@
     setupButton.addEventListener('click', async () => {
       const destinationPath = pathInput.value.trim();
       if (!destinationPath) {
-        setupStatus.textContent = 'Choose the repository folder first.';
+        setupStatus.textContent = 'Choose the Logix source destination folder first.';
         pathInput.focus();
         return;
       }
@@ -417,7 +417,7 @@
           promptForCommitMessage: promptInput.checked,
           initializeRepoIfMissing: initInput.checked
         });
-        setupStatus.textContent = 'Project connected. Git and exploded-content are ready.';
+        setupStatus.textContent = 'Project connected. Git repository and Logix source destination are ready.';
         applyMeta(updatedMeta);
       } catch (error) {
         setupStatus.textContent = error.message;
