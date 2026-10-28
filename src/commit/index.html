@@ -243,19 +243,22 @@
     </div>
     <div class="publish-center">
       <div class="packet" id="packet">—</div>
-      <div class="publish-arrow">→</div>
-      <button class="btn push" id="pushBtn" disabled>Publish to remote</button>
+      <div class="publish-arrow">↔</div>
+      <button class="btn ghost" id="pullBtn" disabled title="Get newer commits from the remote repository">Pull</button>
+      <button class="btn push" id="pushBtn" disabled title="Send local commits to the remote repository">Push</button>
+      <div class="status" id="gitActionHint"><b>Pull</b> gets newer commits. <b>Push</b> sends your local commits.</div>
       <div class="status" id="pushStatus" aria-live="polite">No remote repository configured.</div>
     </div>
     <div class="publish-node remote">
       <strong>Remote repository</strong>
       <span id="remoteState">Not configured</span>
+      <button class="btn ghost" id="openRemoteBtn" disabled title="Open the configured remote repository in your browser">Open remote</button>
     </div>
   </section>
 
   <section class="concept">
     <div><strong>Version control preserves engineering history.</strong><span>Git records the source revision and collaboration history. It does not decide whether a controls change is safe or correct.</span></div>
-    <div><strong>Commit locally, publish deliberately.</strong><span>Capture creates the recoverable local version. Publishing sends that exact version to the configured remote repository.</span></div>
+    <div><strong>Commit locally, pull and push deliberately.</strong><span>Pull gets newer remote commits. Push sends local commits. Pull only fast-forwards a clean repository and never overwrites the saved/open ACD.</span></div>
   </section>
 </main>
 <script>

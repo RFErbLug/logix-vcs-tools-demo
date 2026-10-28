@@ -7,6 +7,8 @@
   const refreshStatusButton = document.getElementById('refreshStatusBtn');
   const savedProjectStatus = document.getElementById('savedProjectStatus');
   const pushButton = document.getElementById('pushBtn');
+  const pullButton = document.getElementById('pullBtn');
+  const pushStatus = document.getElementById('pushStatus');
   const commitStatus = document.getElementById('commitStatus');
   const messageDisplay = document.getElementById('message');
   const versionDisplay = document.getElementById('version');
@@ -30,6 +32,7 @@
   const publishSection = document.getElementById('publishSection');
   const localPublishState = document.getElementById('localPublishState');
   const openRepoButton = document.getElementById('openRepoBtn');
+  const openRemoteButton = document.getElementById('openRemoteBtn');
 
   let live = false;
   let messageInput = null;
@@ -37,6 +40,7 @@
   let setupShell = null;
   let errorLines = [];
   let captureInFlight = false;
+  let restoreRequired = false;
   let lastObservedProjectWrite = null;
   let lastVerifiedProjectWrite = null;
 
@@ -53,67 +57,97 @@
   const renderSharingState = meta => {
     const hasRemote = Boolean(meta?.remoteConfigured);
     const hasVersion = Boolean(meta?.latestSha || meta?.version);
+    const ahead = Number(meta?.ahead || 0);
+    const behind = Number(meta?.behind || 0);
 
     if (publishSection) publishSection.hidden = false;
     if (openRepoButton) openRepoButton.disabled = !meta?.configPresent;
+    if (openRemoteButton) openRemoteButton.disabled = !hasRemote;
+
+    if (pushButton) pushButton.disabled = true;
+    if (pullButton) {
+      pullButton.disabled = true;
+      pullButton.textContent = 'Pull';
+    }
 
     if (localPublishState) {
       localPublishState.textContent = hasVersion
-        ? `${meta?.version || 'Current version'} · ${meta?.latestSha || 'local Git'}`
-        : (meta?.configPresent ? 'Repository ready · no captured version yet' : 'Project not connected yet');
+        ? `${meta?.version || 'Current version'} - ${meta?.latestSha || 'local Git'}`
+        : (meta?.configPresent ? 'Repository ready - no captured project version yet' : 'Project not connected yet');
     }
 
     if (!meta?.configPresent) {
       if (shareState) shareState.textContent = 'Not connected';
       if (remoteState) remoteState.textContent = 'Not configured';
-      if (pushStatus) pushStatus.textContent = 'Connect the project before publishing.';
-      pushButton.disabled = true;
+      if (pushStatus) pushStatus.textContent = 'Connect the project before synchronizing.';
       return;
     }
 
     if (!hasRemote) {
-      if (shareState) shareState.textContent = 'Local only · no remote configured';
+      if (shareState) shareState.textContent = 'Local only - no remote configured';
       if (remoteState) remoteState.textContent = 'Not configured';
       if (pushStatus) pushStatus.textContent = 'No remote repository configured.';
-      pushButton.disabled = true;
       return;
     }
 
     if (remoteState) {
       remoteState.textContent = meta.originUrl
-        ? `origin · ${meta.originUrl}`
+        ? `origin - ${meta.originUrl}`
         : 'Shared Git remote configured.';
     }
 
-    if (!hasVersion) {
-      if (shareState) shareState.textContent = 'Remote configured · no version yet';
-      if (pushStatus) pushStatus.textContent = 'Capture a version before publishing.';
-      pushButton.disabled = true;
+    if (pullButton) pullButton.disabled = false;
+
+    if (ahead > 0 && behind > 0) {
+      if (shareState) shareState.textContent = `Diverged - local +${ahead}, remote +${behind}`;
+      if (pushStatus) pushStatus.textContent = 'Local and remote both have newer commits. Use a full Git client to reconcile them.';
+      if (pushButton) pushButton.disabled = true;
+      if (pullButton) {
+        pullButton.disabled = true;
+        pullButton.textContent = 'Diverged';
+      }
       return;
     }
 
-    const ahead = Number(meta?.ahead || 0);
-    const behind = Number(meta?.behind || 0);
+    if (behind > 0) {
+      if (shareState) shareState.textContent = `Remote has ${behind} newer commit${behind === 1 ? '' : 's'}`;
+      if (pushStatus) pushStatus.textContent = 'Remote commits are available. Pull to fast-forward the local repository.';
+      if (pushButton) pushButton.disabled = true;
+      if (pullButton) {
+        pullButton.disabled = false;
+        pullButton.textContent = 'Pull';
+      }
+      return;
+    }
+
+    if (!hasVersion) {
+      if (shareState) shareState.textContent = 'Remote configured - no captured project version yet';
+      if (pushStatus) pushStatus.textContent = 'Pull from the remote or capture the first project version.';
+      if (pushButton) pushButton.disabled = true;
+      if (pullButton) pullButton.textContent = 'Pull';
+      return;
+    }
 
     if (meta.published) {
-      if (shareState) shareState.textContent = 'Published';
-      if (pushStatus) pushStatus.textContent = 'Local and remote are up to date.';
-      pushButton.disabled = true;
-    } else if (ahead > 0 && behind > 0) {
-      if (shareState) shareState.textContent = `Diverged · local +${ahead}, remote +${behind}`;
-      if (pushStatus) pushStatus.textContent = 'Local and remote both have newer versions. Reconcile before publishing.';
-      pushButton.disabled = true;
-    } else if (behind > 0) {
-      if (shareState) shareState.textContent = `Remote has ${behind} newer version${behind === 1 ? '' : 's'}`;
-      if (pushStatus) pushStatus.textContent = 'Update the local repository before publishing.';
-      pushButton.disabled = true;
-    } else {
-      if (shareState) shareState.textContent = ahead > 0
-        ? `Local · ${ahead} version${ahead === 1 ? '' : 's'} not published`
-        : 'Local version · ready to publish';
-      if (pushStatus) pushStatus.textContent = 'Ready to publish this exact local version.';
-      pushButton.disabled = false;
+      if (shareState) shareState.textContent = 'Local and remote are up to date';
+      if (pushStatus) pushStatus.textContent = 'No unpublished local commits are detected.';
+      if (pushButton) pushButton.disabled = true;
+      if (pullButton) pullButton.textContent = 'Pull';
+      return;
     }
+
+    if (ahead > 0) {
+      if (shareState) shareState.textContent = `Local repository ahead by ${ahead} commit${ahead === 1 ? '' : 's'}`;
+      if (pushStatus) pushStatus.textContent = 'Ready to publish the local repository state.';
+      if (pushButton) pushButton.disabled = false;
+      if (pullButton) pullButton.textContent = 'Pull';
+      return;
+    }
+
+    if (shareState) shareState.textContent = 'Local version - ready to publish';
+    if (pushStatus) pushStatus.textContent = 'Ready to publish this exact local version.';
+    if (pushButton) pushButton.disabled = false;
+    if (pullButton) pullButton.textContent = 'Pull';
   };
 
   const renderResultFromMeta = meta => {
@@ -167,7 +201,7 @@
       if (hashDisplay) hashDisplay.textContent = meta?.latestSha || '—';
       if (messageDisplay) {
         messageDisplay.textContent = meta?.latestMessage
-          ? `${meta.latestMessage} · latest captured Git version`
+          ? `${meta.latestMessage} - latest captured Git version`
           : (meta?.version ? `Latest local history is ${meta.version}.` : 'No local version captured yet');
       }
     }
@@ -442,11 +476,13 @@
     if (meta.configPresent) {
       removeSetup();
       configureMessageField(Boolean(meta.promptForCommitMessage));
-      commitButton.disabled = !meta.l5xgitConfigured;
-      commitStatus.textContent = meta.l5xgitConfigured
-        ? (meta.version ? 'Project connected. Save any new Studio 5000 changes, then capture another version.' : 'Project connected. Save the ACD, then capture the first version.')
-        : 'Project is configured, but l5xgit.exe is not available.';
-      setState(meta.l5xgitConfigured ? 'Ready' : 'Tool unavailable');
+      commitButton.disabled = restoreRequired || !meta.l5xgitConfigured;
+      commitStatus.textContent = restoreRequired
+        ? 'Repository source was updated from remote. The ACD was not overwritten. Use Tools -> Restore Working Project before capturing again.'
+        : (meta.l5xgitConfigured
+          ? (meta.version ? 'Project connected. Save any new Studio 5000 changes, then capture another version.' : 'Project connected. Save the ACD, then capture the first version.')
+          : 'Project is configured, but l5xgit.exe is not available.');
+      setState(restoreRequired ? 'Restore required' : (meta.l5xgitConfigured ? 'Ready' : 'Tool unavailable'));
     } else {
       commitButton.disabled = true;
       pushButton.disabled = true;
@@ -628,7 +664,73 @@
             commitButton.disabled = false;
             setState('Capture stopped');
             break;
-          case 'push_start':
+          case 'pull_start':
+            if (pullButton) pullButton.disabled = true;
+            if (pushButton) pushButton.disabled = true;
+            if (shareState) shareState.textContent = data.apply ? 'Updating from remoteâ€¦' : 'Checking remoteâ€¦';
+            if (pushStatus) pushStatus.textContent = data.apply
+              ? 'Fetching the remote, then applying a fast-forward-only update.'
+              : 'Refreshing remote-tracking information. No working files will be changed.';
+            setState(data.apply ? 'Updating from remote' : 'Checking remote');
+            break;
+          case 'pull_available':
+            currentMeta = {
+              ...currentMeta,
+              ...(data.meta || {}),
+              ahead: Number(data.ahead || 0),
+              behind: Number(data.behind || 0),
+              published: false
+            };
+            renderSharingState(currentMeta);
+            if (pushStatus) pushStatus.textContent = data.message || 'Remote updates are available.';
+            setState('Remote update available');
+            break;
+          case 'pull_no_changes':
+            currentMeta = {
+              ...currentMeta,
+              ...(data.meta || {}),
+              ahead: Number(data.ahead || 0),
+              behind: Number(data.behind || 0)
+            };
+            renderSharingState(currentMeta);
+            if (pushStatus) pushStatus.textContent = data.message || 'No newer remote commits were found.';
+            setState('Remote checked');
+            break;
+          case 'pull_success':
+            restoreRequired = true;
+            currentMeta = {
+              ...currentMeta,
+              ...(data.meta || {}),
+              ahead: 0,
+              behind: 0,
+              published: true
+            };
+            renderSharingState(currentMeta);
+            commitButton.disabled = true;
+            setResultMode('ready');
+            if (resultTitle) resultTitle.textContent = 'Repository updated';
+            if (resultBody) {
+              const count = Number(data.updatedCommits || 0);
+              resultBody.textContent =
+                `${count || 'Remote'} newer commit${count === 1 ? '' : 's'} were applied with fast-forward-only Git. ` +
+                'The saved/open ACD was not overwritten. Use Tools -> Restore Working Project before capturing again.';
+            }
+            if (resultChangeCount) resultChangeCount.textContent = 'ACD unchanged';
+            if (savedProjectStatus) {
+              savedProjectStatus.textContent =
+                'Remote source is newer. The ACD was intentionally left unchanged; restore the desired Git version before the next capture.';
+            }
+            commitStatus.innerHTML =
+              '<b>Repository updated.</b> The ACD was not overwritten. Use Tools -> Restore Working Project before capturing again.';
+            if (pushStatus) pushStatus.textContent = data.message || 'Repository updated from remote.';
+            setState('Restore required');
+            break;
+          case 'pull_failure':
+            if (data.meta) currentMeta = { ...currentMeta, ...data.meta };
+            renderSharingState(currentMeta);
+            if (pushStatus) pushStatus.textContent = data.message || 'Remote update stopped.';
+            setState('Remote update stopped');
+            break;          case 'push_start':
             api.pushStart(data);
             if (shareState) shareState.textContent = 'Publishing…';
             setState('Publishing');
@@ -698,6 +800,21 @@
     }
   }, true);
 
+  openRemoteButton?.addEventListener('click', async event => {
+    if (!live) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    openRemoteButton.disabled = true;
+
+    try {
+      await post('/api/open-remote');
+    } catch (error) {
+      if (pushStatus) pushStatus.textContent = `Could not open remote repository: ${error.message}`;
+    } finally {
+      openRemoteButton.disabled = !currentMeta?.remoteConfigured;
+    }
+  }, true);
   refreshStatusButton?.addEventListener('click', async event => {
     if (!live) return;
     event.preventDefault();
@@ -728,6 +845,28 @@
     setState(currentMeta?.configPresent ? 'Ready' : 'Setup required');
   }, true);
 
+  pullButton?.addEventListener('click', async event => {
+    if (!live) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+
+    if (!currentMeta?.configPresent || !currentMeta?.remoteConfigured) {
+      if (pushStatus) pushStatus.textContent = 'Connect a remote repository before pulling.';
+      return;
+    }
+
+    pullButton.disabled = true;
+    pushButton.disabled = true;
+    setState('Pulling');
+
+    try {
+      await post('/api/pull', { apply: true });
+    } catch (error) {
+      renderSharingState(currentMeta);
+      if (pushStatus) pushStatus.textContent = `Pull failed: ${error.message}`;
+      setState('Pull stopped');
+    }
+  }, true);
   pushButton.addEventListener('click', async event => {
     if (!live) return;
     event.preventDefault();

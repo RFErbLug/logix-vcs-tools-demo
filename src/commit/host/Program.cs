@@ -135,6 +135,51 @@ app.MapPost("/api/open-repo", async () =>
     }
 });
 
+app.MapPost("/api/pull", (PullRequest request) =>
+{
+    if (!operationGate.Wait(0))
+        return Results.Conflict(new { error = "Another VCS operation is already running." });
+
+    _ = Task.Run(async () =>
+    {
+        try { await RunPullAsync(request.Apply); }
+        finally
+        {
+            operationGate.Release();
+            ScheduleIdleShutdown();
+        }
+    });
+
+    return Results.Accepted();
+});
+app.MapPost("/api/open-remote", async () =>
+{
+    var repoPath = state.ResolveRepoPath();
+    if (repoPath is null)
+        return Results.BadRequest(new { error = "This project is not connected to a Git repository yet." });
+
+    var originUrl = await GitCaptureAsync(repoPath, "remote", "get-url", "origin");
+    if (string.IsNullOrWhiteSpace(originUrl))
+        return Results.BadRequest(new { error = "No shared Git remote named 'origin' is configured for this repository." });
+
+    var browserUrl = ToBrowsableRemoteUrl(originUrl);
+    if (string.IsNullOrWhiteSpace(browserUrl))
+        return Results.BadRequest(new { error = "The configured origin is not a browser-friendly remote URL." });
+
+    try
+    {
+        Process.Start(new ProcessStartInfo(browserUrl)
+        {
+            UseShellExecute = true
+        });
+
+        return Results.Ok(new { url = browserUrl });
+    }
+    catch (Exception ex)
+    {
+        return Results.BadRequest(new { error = $"Unable to open the remote repository: {ex.Message}" });
+    }
+});
 app.MapPost("/api/push", () =>
 {
     if (!operationGate.Wait(0))
@@ -626,6 +671,253 @@ async Task RunCommitAsync(CommitRequest request)
     });
 }
 
+async Task RunPullAsync(bool applyRequested)
+{
+    var repoPath = state.ResolveRepoPath();
+    if (repoPath is null)
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = "Unable to determine the Git repository path."
+        });
+        return;
+    }
+
+    var repoRoot = await GitCaptureAsync(repoPath, "rev-parse", "--show-toplevel");
+    if (string.IsNullOrWhiteSpace(repoRoot))
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = "Unable to determine the Git repository root."
+        });
+        return;
+    }
+
+    repoRoot = Path.GetFullPath(repoRoot);
+
+    var originUrl = await GitCaptureAsync(repoRoot, "remote", "get-url", "origin");
+    if (string.IsNullOrWhiteSpace(originUrl))
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = "No shared Git remote named 'origin' is configured for this repository."
+        });
+        return;
+    }
+
+    var branch = await GitCaptureAsync(repoRoot, "rev-parse", "--abbrev-ref", "HEAD");
+    if (string.IsNullOrWhiteSpace(branch) ||
+        string.Equals(branch, "HEAD", StringComparison.OrdinalIgnoreCase))
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = "The repository is not on a named branch. Update from remote is disabled for detached HEAD."
+        });
+        return;
+    }
+
+    events.Publish(new
+    {
+        type = "pull_start",
+        branch,
+        apply = applyRequested
+    });
+
+    // Fetch is intentionally non-destructive. It refreshes the remote-tracking
+    // refs so the UI does not make an update decision from stale information.
+    var fetch = await RunGitAsync(repoRoot, "fetch", "--prune", "origin");
+
+    foreach (var line in fetch.Output)
+        events.Publish(new { type = "raw", line });
+    foreach (var line in fetch.Errors)
+        events.Publish(new { type = "raw", line = "ERROR: " + line });
+
+    if (fetch.ExitCode != 0)
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = fetch.Errors.LastOrDefault()
+                ?? $"git fetch exited with code {fetch.ExitCode}."
+        });
+        return;
+    }
+
+    var upstream = await GitCaptureAsync(
+        repoRoot,
+        "rev-parse",
+        "--abbrev-ref",
+        "--symbolic-full-name",
+        "@{u}");
+
+        var hasConfiguredUpstream = !string.IsNullOrWhiteSpace(upstream);
+
+if (string.IsNullOrWhiteSpace(upstream))
+    {
+        var candidate = $"origin/{branch}";
+        var verify = await RunGitAsync(repoRoot, "rev-parse", "--verify", candidate);
+
+        if (verify.ExitCode != 0)
+        {
+            events.Publish(new
+            {
+                type = "pull_failure",
+                message =
+                    $"No upstream branch is configured for '{branch}', and '{candidate}' was not found. " +
+                    "Publish the branch once or configure its upstream before updating."
+            });
+            return;
+        }
+
+        upstream = candidate;
+    }
+
+    var countText = await GitCaptureAsync(
+        repoRoot,
+        "rev-list",
+        "--left-right",
+        "--count",
+        $"{upstream}...HEAD");
+
+    var parts = countText?.Split(
+        (char[]?)null,
+        StringSplitOptions.RemoveEmptyEntries);
+
+    if (parts is not { Length: >= 2 } ||
+        !int.TryParse(parts[0], out var behind) ||
+        !int.TryParse(parts[1], out var ahead))
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = "Unable to determine whether the local and remote branches differ."
+        });
+        return;
+    }
+
+    var checkedMeta = await BuildMetaAsync();
+
+    if (ahead > 0 && behind > 0)
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message =
+                $"Local and remote have diverged (local +{ahead}, remote +{behind}). " +
+                "No automatic merge was attempted. Reconcile the branch in a full Git client.",
+            meta = checkedMeta,
+            ahead,
+            behind
+        });
+        return;
+    }
+
+    if (behind == 0)
+    {
+        var message = ahead > 0
+            ? $"Remote has no newer commits. Local is ahead by {ahead} commit{(ahead == 1 ? "" : "s")}."
+            : "Local and remote are already up to date.";
+
+        events.Publish(new
+        {
+            type = "pull_no_changes",
+            message,
+            meta = checkedMeta,
+            ahead,
+            behind
+        });
+        return;
+    }
+
+    if (!applyRequested)
+    {
+        events.Publish(new
+        {
+            type = "pull_available",
+            message =
+                $"Remote has {behind} newer commit{(behind == 1 ? "" : "s")} available.",
+            meta = checkedMeta,
+            ahead,
+            behind
+        });
+        return;
+    }
+
+    // Pull changes the entire repository, so tracked local edits anywhere in
+    // the repository block the operation. Untracked files are left to Git's
+    // own collision protection so local project-side config files do not make
+    // every update impossible.
+    var trackedChanges = await RunGitAsync(
+        repoRoot,
+        "status",
+        "--porcelain",
+        "--untracked-files=no");
+
+    if (trackedChanges.ExitCode != 0)
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = "Unable to inspect the repository working tree before updating."
+        });
+        return;
+    }
+
+    if (trackedChanges.Output.Any(line => !string.IsNullOrWhiteSpace(line)))
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message =
+                "The repository has tracked local changes. Capture/commit or discard those changes before updating from remote. " +
+                "No pull was attempted.",
+            meta = checkedMeta,
+            ahead,
+            behind
+        });
+        return;
+    }
+
+    var pull = hasConfiguredUpstream
+        ? await RunGitAsync(repoRoot, "pull", "--ff-only")
+        : await RunGitAsync(repoRoot, "pull", "--ff-only", "origin", branch);
+
+    foreach (var line in pull.Output)
+        events.Publish(new { type = "raw", line });
+    foreach (var line in pull.Errors)
+        events.Publish(new { type = "raw", line = "ERROR: " + line });
+
+    if (pull.ExitCode != 0)
+    {
+        events.Publish(new
+        {
+            type = "pull_failure",
+            message = pull.Errors.LastOrDefault()
+                ?? $"git pull --ff-only exited with code {pull.ExitCode}.",
+            meta = checkedMeta,
+            ahead,
+            behind
+        });
+        return;
+    }
+
+    var updatedMeta = await BuildMetaAsync();
+
+    events.Publish(new
+    {
+        type = "pull_success",
+        message =
+            $"Repository updated by {behind} commit{(behind == 1 ? "" : "s")}. " +
+            "The saved/open ACD was not overwritten.",
+        meta = updatedMeta,
+        updatedCommits = behind,
+        branch
+    });
+}
 async Task RunPushAsync()
 {
     var repoPath = state.ResolveRepoPath();
@@ -672,6 +964,53 @@ async Task RunPushAsync()
     events.Publish(new { type = "push_success", version, branch, sha });
 }
 
+static string? ToBrowsableRemoteUrl(string remoteUrl)
+{
+    var remote = remoteUrl.Trim();
+
+    if (Uri.TryCreate(remote, UriKind.Absolute, out var uri))
+    {
+        if (string.Equals(uri.Scheme, "http", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(uri.Scheme, "https", StringComparison.OrdinalIgnoreCase))
+        {
+            return remote.EndsWith(".git", StringComparison.OrdinalIgnoreCase)
+                ? remote[..^4]
+                : remote;
+        }
+
+        if (string.Equals(uri.Scheme, "ssh", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(uri.Scheme, "git", StringComparison.OrdinalIgnoreCase))
+        {
+            var path = uri.AbsolutePath.Trim('/');
+
+            if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+                path = path[..^4];
+
+            return string.IsNullOrWhiteSpace(uri.Host) || string.IsNullOrWhiteSpace(path)
+                ? null
+                : $"https://{uri.Host}/{path}";
+        }
+    }
+
+    var scpStyle = Regex.Match(
+        remote,
+        @"^(?:[^@]+@)?(?<host>[^:]+):(?<path>.+)$");
+
+    if (scpStyle.Success)
+    {
+        var host = scpStyle.Groups["host"].Value;
+        var path = scpStyle.Groups["path"].Value.Trim('/');
+
+        if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            path = path[..^4];
+
+        return string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(path)
+            ? null
+            : $"https://{host}/{path}";
+    }
+
+    return null;
+}
 static async Task PumpAsync(StreamReader reader, Action<string> onLine)
 {
     while (await reader.ReadLineAsync() is { } line)
@@ -865,6 +1204,7 @@ static string ReadEmbedded(string suffix)
 
 sealed record SetupRequest(string? RepositoryPath, bool PromptForCommitMessage, bool InitializeRepoIfMissing);
 sealed record FolderPickerRequest(string? InitialPath);
+sealed record PullRequest(bool Apply);
 sealed record CommitRequest(string? Message);
 sealed record ProcessResult(int ExitCode, string[] Output, string[] Errors);
 sealed record Subscription(Guid Id, ChannelReader<string> Reader);
